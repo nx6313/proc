@@ -1,0 +1,14 @@
+{
+  "name": "projectc",
+  "version": "1.0.12",
+  "description": "simple to create project frame",
+  "main": "ws.js",
+  "scripts": {
+    "ptc": "node ./../projectc/ws.js"
+  },
+  "keywords": [
+    "proc"
+  ],
+  "author": "nx6313",
+  "license": "ISC"
+}
