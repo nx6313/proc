@@ -74,72 +74,78 @@ var funGetContentType = function (filePath) {
     return contentType; //返回内容类型字符串
 }
 //Web服务器主函数,解析请求,返回Web内容
-let serIndexHtml = 'index.html';
+let projectRoot = '';
+let serIndexHtml = '';
 var funWebSvr = function (req, res) {
     var reqUrl = req.url; //获取请求的url
     //向控制台输出请求的路径,会将网络请求的所有资源路径就行输出
     //console.log(reqUrl);
     //使用url解析模块获取url中的路径名
     var pathName = libUrl.parse(reqUrl).pathname;
-    if (libPath.extname(pathName) == "") {
+    if (libPath.extname(pathName) == '') {
         //如果路径没有扩展名
-        pathName += "/"; //指定访问目录
+        pathName += '/'; //指定访问目录
     }
-    if (pathName.charAt(pathName.length - 1) == "/") {
+    if (pathName.charAt(pathName.length - 1) == '/') {
         //如果访问目录
         pathName += serIndexHtml; //指定为默认网页
     }
     //使用路径解析模块,组装实际文件路径
-    var filePath = libPath.join("./WebRoot", pathName);
+    var filePath = libPath.join('./' + projectRoot, pathName);
     //判断文件是否存在
     libFs.exists(filePath, function (exists) {
         if (exists) {//文件存在
             //在返回头中写入内容类型
-            res.writeHead(200, { "Content-Type": funGetContentType(filePath) });
+            res.writeHead(200, { 'Content-Type': funGetContentType(filePath) });
             //创建只读流用于返回
             var stream = libFs.createReadStream(filePath, { flags: "r", encoding: null });
             //指定如果流读取错误,返回404错误
-            stream.on("error", function () {
+            stream.on('error', function () {
                 res.writeHead(404);
-                res.end("<h1>404 Read Error</h1>");
+                res.end('<h1>404 Read Error</h1>');
             });
             //连接文件流和http返回流的管道,用于返回实际Web内容
             stream.pipe(res);
-        }
-        else { //文件不存在
+        } else { //文件不存在
             //返回404错误
-            res.writeHead(404, { "Content-Type": "text/html" });
-            res.end("<h1>404 Not Found</h1>");
+            res.writeHead(404, { 'Content-Type': 'text/html' });
+            res.end('<h1>404 Not Found</h1>');
         }
     });
 }
 
 //开始启动独立服务器
 var startNodeServer = function () {
-    rl.question('项目入口地址，以当前目录为根目录(默认 index.html)：', (serInnerHtml) => {
-        if (serInnerHtml) {
-            serIndexHtml = serInnerHtml;
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '项目根地址，(默认 当前目录)，或输入该目录下的项目根文件夹名称：'), (inputPorjectRoot) => {
+        if (inputPorjectRoot) {
+            projectRoot = inputPorjectRoot;
         }
-        rl.question('启动服务器端口号(默认 8080)：', (serPort) => {
-            let portNum = 8080;
-            if (serPort) {
-                portNum = serPort;
+        rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '项目入口地址，以当前目录为根目录(默认 空)：'), (serInnerHtml) => {
+            if (serInnerHtml) {
+                serIndexHtml = serInnerHtml;
             }
-            console.log('');
-            console.log(`独立服务器启动 -> 入口地址：${serIndexHtml}，监听端口：${portNum}`);
-            //创建一个http服务器
-            var webSvr = libHttp.createServer(funWebSvr);
-            //指定服务器错误事件响应
-            webSvr.on("error", function (error) {
-                //console.log(error); //在控制台中输出错误信息
-            });
-            //开始侦听端口
-            startInPort(webSvr, portNum);
-            webSvr.on('error', function (err) {
-                webSvr.close();
-                if (err.code === 'EADDRINUSE') { // 端口已经被使用
-                    console.log(`${portNum} 端口号已被使用`);
+            rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '启动服务器端口号(默认 8080)：'), (serPort) => {
+                let portNum = 8080;
+                if (serPort) {
+                    portNum = serPort;
                 }
+                console.log('');
+                console.log(`项目所在目录 -> 当前目录，独立服务器启动 -> 入口地址：${serIndexHtml}，监听端口：${portNum}`);
+                //创建一个http服务器
+                var webSvr = libHttp.createServer(funWebSvr);
+                //指定服务器错误事件响应
+                webSvr.on("error", function (error) {
+                    //console.log(error); //在控制台中输出错误信息
+                });
+                //开始侦听端口
+                startInPort(webSvr, portNum);
+                webSvr.on('error', function (err) {
+                    webSvr.close();
+                    if (err.code === 'EADDRINUSE') { // 端口已经被使用
+                        console.log(`${portNum} 端口号已被使用`);
+                        rl.close();
+                    }
+                });
             });
         });
     });
@@ -164,24 +170,28 @@ var showMenu = function () {
         '构建微信小程序框架', '构建手机端WebApp框架'
     ];
     let menuSuperArr = [
-        '启动独立服务器'
+        // '启动独立服务器'
     ];
     console.log('');
     console.log('================ 操作菜单 ================');
     console.log('');
-    for (menuIndex = 1; menuIndex <= menuArr.length; menuIndex++) {
-        menuIndexArr.push(String(menuIndex));
-        let menuVal = menuArr[menuIndex - 1];
-        console.log(util.format(styles.cyanBG[0] + '%s' + styles.cyanBG[1] + ' ' + menuVal, ' ' + menuIndex + '. '));
+    if (menuArr) {
+        for (menuIndex = 1; menuIndex <= menuArr.length; menuIndex++) {
+            menuIndexArr.push(String(menuIndex));
+            let menuVal = menuArr[menuIndex - 1];
+            console.log(util.format(styles.cyanBG[0] + '%s' + styles.cyanBG[1] + ' ' + menuVal, ' ' + menuIndex + '. '));
+        }
     }
-    if (menuArr && menuArr.length > 0) {
+    if (menuArr && menuArr.length > 0 && menuSuperArr && menuSuperArr.length > 0) {
         console.log('==========================================');
         console.log('');
     }
-    for (menuSuperIndex = 1; menuSuperIndex <= menuSuperArr.length; menuSuperIndex++) {
-        menuIndexArr.push('S' + String(menuSuperIndex));
-        let menuVal = menuSuperArr[menuSuperIndex - 1];
-        console.log(util.format(styles.cyanBG[0] + '%s' + styles.cyanBG[1] + ' ' + menuVal, ' S' + menuSuperIndex + '. '));
+    if (menuSuperArr) {
+        for (menuSuperIndex = 1; menuSuperIndex <= menuSuperArr.length; menuSuperIndex++) {
+            menuIndexArr.push('S' + String(menuSuperIndex));
+            let menuVal = menuSuperArr[menuSuperIndex - 1];
+            console.log(util.format(styles.cyanBG[0] + '%s' + styles.cyanBG[1] + ' ' + menuVal, ' S' + menuSuperIndex + '. '));
+        }
     }
     console.log('==========================================');
 };
@@ -263,7 +273,7 @@ var updateProjectDirContainer = {}; // 需要修改的文件夹相关内容
 var updateProjectFileContainer = {}; // 需要修改的文件相关内容
 var filePath = libPath.resolve(); // 获取当前目录绝对路径
 var fileTotalLength = 0, currentFileIndex = 0, cursorDx = 0, cursorDy = 0, dxInfo;
-var copy = function (src, dst, resolve) {
+var copy = function (src, dst, resolve, projectName) {
     //判断文件需要时间，则必须同步
     if (libFs.existsSync(src)) {
         libFs.readdir(src, function (err, files) {
@@ -273,7 +283,9 @@ var copy = function (src, dst, resolve) {
                 currentFileIndex += 1;
 
                 var url = libPath.join(src, filename), dest = libPath.join(dst, filename);
-                var outputContent = util.format(styles.blackBG[0] + '%s' + styles.blackBG[1] + ' [ %d% ] ' + url, '解析文件 ->', currentFileIndex * 100 / fileTotalLength);
+                var progressVal = currentFileIndex / fileTotalLength;
+                var progressStr = getProgressTxt(progressVal);
+                var outputContent = util.format(styles.blackBG[0] + '%s' + styles.blackBG[1] + '[' + progressStr + '] [ %d% ] ', '解析文件 -> ', (currentFileIndex * 100 / fileTotalLength).toFixed(2));
 
                 //将光标移动到已经写入的字符前面
                 readline.moveCursor(rl.output, cursorDx * -1, cursorDy * -1);
@@ -285,7 +297,7 @@ var copy = function (src, dst, resolve) {
                 cursorDy = dxInfo.rows;
 
                 if (fileTotalLength == currentFileIndex) {
-                    rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' [ %d% ] ' + '解析完成', '解析文件 -> ', 100));
+                    rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + '[' + progressStr + '] [ %d% ] ' + '解析完成', '解析文件 -> ', 100));
                     rl.prompt();
                     console.log('');
                 }
@@ -301,7 +313,7 @@ var copy = function (src, dst, resolve) {
                                 readable.on('data', (dataBuffer) => {
                                     //创建写入流
                                     writable = libFs.createWriteStream(dest, { encoding: 'utf8' });
-                                    let doUpdate = doFileUpdate(dataBuffer, fileUpdateObj, writable);
+                                    let doUpdate = doFileUpdate(dataBuffer, fileUpdateObj, writable, projectName);
                                     if (doUpdate === false) {
                                         readable.pause();
                                     }
@@ -336,7 +348,7 @@ var copy = function (src, dst, resolve) {
                             if (updateProjectDirContainer[filename]) {
                                 dest = libPath.join(dst, updateProjectDirContainer[filename]);
                             }
-                            exists(url, dest, copy, resolve);
+                            exists(url, dest, copy, resolve, projectName);
                         }
                     }
                 }, 10);
@@ -349,20 +361,20 @@ var copy = function (src, dst, resolve) {
         return;
     }
 };
-function exists(url, dest, callback, resolve) {
+function exists(url, dest, callback, resolve, projectName) {
     libFs.exists(dest, function (exists) {
         if (exists) {
-            callback && callback(url, dest, resolve);
+            callback && callback(url, dest, resolve, projectName);
         } else {
             //第二个参数目录权限 ，默认0777(读写权限)
             libFs.mkdir(dest, 0777, function (err) {
                 if (err) throw err;
-                callback && callback(url, dest, resolve);
+                callback && callback(url, dest, resolve, projectName);
             });
         }
     });
 }
-function doFileUpdate(dataBuffer, fileUpdateObj, writable) {
+function doFileUpdate(dataBuffer, fileUpdateObj, writable, projectName) {
     let dataCtx = dataBuffer.toString('utf8');
     for (let fileUpdateKey in fileUpdateObj) {
         // let fileUpdateBuffer = Buffer.from(fileUpdateKey);
@@ -372,9 +384,26 @@ function doFileUpdate(dataBuffer, fileUpdateObj, writable) {
         //     let updateTo = Buffer.from(fileUpdateObj[fileUpdateKey], 'utf8');
         //     dataBuffer = Buffer.from(dataBuffer).fill(updateTo, updateByteStart, updateByteEnd);
         // }
-        dataCtx = dataCtx.replace(eval('/' + fileUpdateKey + '/g'), fileUpdateObj[fileUpdateKey]);
+        let updateToVal = fileUpdateObj[fileUpdateKey];
+        if (updateToVal == '_PROJECT_NAME_') {
+            updateToVal = projectName;
+        }
+        dataCtx = dataCtx.replace(eval('/' + fileUpdateKey + '/g'), updateToVal);
     }
     return writable.write(dataCtx, 'utf8');
+}
+// 获取进度条文本
+function getProgressTxt(currentProgress) {
+    let progressTxt = '';
+    let hasCompliteProgress = Math.floor(currentProgress * 20);
+    let waitProgress = 20 - hasCompliteProgress;
+    for (let h = 0; h < hasCompliteProgress; h++) {
+        progressTxt += '■';
+    }
+    for (let e = 0; e < waitProgress; e++) {
+        progressTxt += '□';
+    }
+    return progressTxt;
 }
 
 /**
@@ -382,31 +411,36 @@ function doFileUpdate(dataBuffer, fileUpdateObj, writable) {
  */
 var buildProject = function (projectFilePath, updateCtx) {
     rl.question('输入项目名称：', (projectName) => {
-        updateProjectDirContainer = {}; // 清空修改部分容器对象
-        updateProjectFileContainer = {}; // 清空修改部分容器对象
-        updateProjectDirContainer._PROJECT_NAME_ = projectName;
-        if (updateCtx) {
-            if (updateCtx.dir) {
-                for (let updateDirKey in updateCtx.dir) {
-                    updateProjectDirContainer[updateDirKey] = updateCtx.dir[updateDirKey];
+        if (projectName) {
+            updateProjectDirContainer = {}; // 清空修改部分容器对象
+            updateProjectFileContainer = {}; // 清空修改部分容器对象
+            updateProjectDirContainer._PROJECT_NAME_ = projectName;
+            if (updateCtx) {
+                if (updateCtx.dir) {
+                    for (let updateDirKey in updateCtx.dir) {
+                        updateProjectDirContainer[updateDirKey] = updateCtx.dir[updateDirKey];
+                    }
+                }
+                if (updateCtx.file) {
+                    for (let updateFileKey in updateCtx.file) {
+                        updateProjectFileContainer[updateFileKey] = updateCtx.file[updateFileKey];
+                    }
                 }
             }
-            if (updateCtx.file) {
-                for (let updateFileKey in updateCtx.file) {
-                    updateProjectFileContainer[updateFileKey] = updateCtx.file[updateFileKey];
-                }
-            }
+            new Promise(function (resolve) {
+                console.log('');
+                let filesList = geFileList(projectFilePath);
+                fileTotalLength = filesList.length;
+                copy(projectFilePath, filePath, resolve, projectName);
+            }).then(function (value) {
+                rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ' + filePath, '项目构建完成，保存路径为：'));
+                rl.prompt();
+                rl.close();
+            });
+        } else {
+            console.error(styles.redBG[0] + '%s' + styles.redBG[1], '项目名称不能为空，请重新输入');
+            buildProject(projectFilePath, updateCtx);
         }
-        new Promise(function (resolve) {
-            console.log('');
-            let filesList = geFileList(projectFilePath);
-            fileTotalLength = filesList.length;
-            copy(projectFilePath, filePath, resolve);
-        }).then(function (value) {
-            rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ' + filePath, '项目构建完成，保存路径为：'));
-            rl.prompt();
-            rl.close();
-        });
     });
 };
 
@@ -422,14 +456,14 @@ var questionSelectMenu = function () {
                     buildProject('../projectc/pros/weball/', {
                         dir: {},
                         file: {
-                            '11.txt': {
-                                _FILE_NAME_: ' dfdff'
+                            '.project': {
+                                _PROJECT_NAME_: '_PROJECT_NAME_'
                             },
-                            '563.txt': {
-                                _FILE_NAME_: ' dfdff'
+                            'org.eclipse.wst.common.component': {
+                                _PROJECT_NAME_: '_PROJECT_NAME_'
                             },
-                            '3s.txt': {
-                                _FILE_NAME_: ' dfdff'
+                            'pom.xml': {
+                                _PROJECT_NAME_: '_PROJECT_NAME_'
                             }
                         }
                     });
