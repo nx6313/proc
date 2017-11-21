@@ -410,32 +410,37 @@ function getProgressTxt(currentProgress) {
  * 构建项目框架
  */
 var buildProject = function (projectFilePath, updateCtx) {
-    rl.question('输入项目名称：', (projectName) => {
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入项目名称：'), (projectName) => {
         if (projectName) {
-            updateProjectDirContainer = {}; // 清空修改部分容器对象
-            updateProjectFileContainer = {}; // 清空修改部分容器对象
-            updateProjectDirContainer._PROJECT_NAME_ = projectName;
-            if (updateCtx) {
-                if (updateCtx.dir) {
-                    for (let updateDirKey in updateCtx.dir) {
-                        updateProjectDirContainer[updateDirKey] = updateCtx.dir[updateDirKey];
+            rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入项目保存路径（默认当前路径）：'), (projectSavePath) => {
+                if (projectSavePath) {
+                    filePath = projectSavePath;
+                }
+                updateProjectDirContainer = {}; // 清空修改部分容器对象
+                updateProjectFileContainer = {}; // 清空修改部分容器对象
+                updateProjectDirContainer._PROJECT_NAME_ = projectName;
+                if (updateCtx) {
+                    if (updateCtx.dir) {
+                        for (let updateDirKey in updateCtx.dir) {
+                            updateProjectDirContainer[updateDirKey] = updateCtx.dir[updateDirKey];
+                        }
+                    }
+                    if (updateCtx.file) {
+                        for (let updateFileKey in updateCtx.file) {
+                            updateProjectFileContainer[updateFileKey] = updateCtx.file[updateFileKey];
+                        }
                     }
                 }
-                if (updateCtx.file) {
-                    for (let updateFileKey in updateCtx.file) {
-                        updateProjectFileContainer[updateFileKey] = updateCtx.file[updateFileKey];
-                    }
-                }
-            }
-            new Promise(function (resolve) {
-                console.log('');
-                let filesList = geFileList(projectFilePath);
-                fileTotalLength = filesList.length;
-                copy(projectFilePath, filePath, resolve, projectName);
-            }).then(function (value) {
-                rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ' + filePath, '项目构建完成，保存路径为：'));
-                rl.prompt();
-                rl.close();
+                new Promise(function (resolve) {
+                    console.log('');
+                    let filesList = geFileList(projectFilePath);
+                    fileTotalLength = filesList.length;
+                    copy(projectFilePath, filePath, resolve, projectName);
+                }).then(function (value) {
+                    rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ' + filePath, '项目构建完成，保存路径为：'));
+                    rl.prompt();
+                    rl.close();
+                });
             });
         } else {
             console.error(styles.redBG[0] + '%s' + styles.redBG[1], '项目名称不能为空，请重新输入');
