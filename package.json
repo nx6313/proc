@@ -1,6 +1,6 @@
 {
   "name": "projectc",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "description": "simple to create project frame",
   "main": "ws.js",
   "scripts": {
