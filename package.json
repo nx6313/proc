@@ -1,5 +1,5 @@
 {
-  "name": "ptc",
+  "name": "ptc-nx",
   "version": "1.0.16",
   "description": "simple to create project frame",
   "main": "ws.js",
