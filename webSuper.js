@@ -221,20 +221,42 @@ function readFile(path, filesList) {
         var url = libPath.join(path, file);
         states = libFs.statSync(url);
         if (states.isDirectory()) {
-            var obj = new Object();
-            obj.type = 'dir';
-            obj.name = file;//文件夹名
-            obj.path = url; //文件夹绝对路径
-            filesList.push(obj);
-            readFile(url, filesList);
+            let ingroneThisDir = false;
+            for (let ignoreProjectDirKey in ignoreProjectDirContainer) {
+                if (ignoreProjectDirContainer[ignoreProjectDirKey] == file) {
+                    if (eval(ignoreProjectDirKey)) {
+                        ingroneThisDir = true;
+                        break;
+                    }
+                }
+            }
+            if (!ingroneThisDir) {
+                var obj = new Object();
+                obj.type = 'dir';
+                obj.name = file;//文件夹名
+                obj.path = url; //文件夹绝对路径
+                filesList.push(obj);
+                readFile(url, filesList);
+            }
         } else {
-            //创建一个对象保存信息
-            var obj = new Object();
-            obj.type = 'file';
-            obj.size = states.size;//文件大小，以字节为单位
-            obj.name = file;//文件名
-            obj.path = url; //文件绝对路径
-            filesList.push(obj);
+            let ingroneThisFile = false;
+            for (let ignoreProjectFileKey in ignoreProjectFileContainer) {
+                if (ignoreProjectFileContainer[ignoreProjectFileKey] == file) {
+                    if (eval(ignoreProjectFileKey)) {
+                        ingroneThisFile = true;
+                        break;
+                    }
+                }
+            }
+            if (!ingroneThisFile) {
+                //创建一个对象保存信息
+                var obj = new Object();
+                obj.type = 'file';
+                obj.size = states.size;//文件大小，以字节为单位
+                obj.name = file;//文件名
+                obj.path = url; //文件绝对路径
+                filesList.push(obj);
+            }
         }
     }
 }
@@ -271,44 +293,47 @@ var getStrOccRowColumns = function (str) {
 
 var updateProjectDirContainer = {}; // 需要修改的文件夹相关内容
 var updateProjectFileContainer = {}; // 需要修改的文件相关内容
+var ignoreProjectDirContainer = {}; // 需要忽略掉的文件夹
+var ignoreProjectFileContainer = {}; // 需要忽略掉的文件
 var filePath = libPath.resolve(); // 获取当前目录绝对路径
+var newProjectDataBase, newProjectDataBaseUrl, newProjectDataBaseUserName, newProjectDataBasePassWord,
+    newProjectSelectedPageShowType, newProjectAddUserTb; // WEB项目使用参数
 var fileTotalLength = 0, currentFileIndex = 0, cursorDx = 0, cursorDy = 0, dxInfo;
-var copy = function (src, dst, resolve, projectName) {
+var copy = function (src, dst, resolve, projectName, packageReplace) {
     //判断文件需要时间，则必须同步
     if (libFs.existsSync(src)) {
         libFs.readdir(src, function (err, files) {
             if (err) { console.log(err); return; }
             let thisFolderFileSize = files.length;
             files.forEach(function (filename, thisFolderFileIndex) {
-                currentFileIndex += 1;
-
                 var url = libPath.join(src, filename), dest = libPath.join(dst, filename);
-                var progressVal = currentFileIndex / fileTotalLength;
-                var progressStr = getProgressTxt(progressVal);
-                var outputContent = util.format(styles.blackBG[0] + '%s' + styles.blackBG[1] + '[' + progressStr + '] [ %d% ] ', '解析文件 -> ', (currentFileIndex * 100 / fileTotalLength).toFixed(2));
 
-                //将光标移动到已经写入的字符前面
-                readline.moveCursor(rl.output, cursorDx * -1, cursorDy * -1);
-                //清除当前光标后的所有文字信息，以便接下来输出信息能写入到控制台
-                readline.clearScreenDown(rl.output);
-                rl.output.write(outputContent);
-                dxInfo = getStrOccRowColumns(outputContent);
-                cursorDx = dxInfo.columns;
-                cursorDy = dxInfo.rows;
-
-                if (fileTotalLength == currentFileIndex) {
-                    rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + '[' + progressStr + '] [ %d% ] ' + '解析完成', '解析文件 -> ', 100));
-                    rl.prompt();
-                    console.log('');
-                }
-
-                setTimeout(function () {
-                    let stats = libFs.statSync(libPath.join(src, filename));
-                    if (stats) {
-                        if (stats.isFile()) {
+                let stats = libFs.statSync(libPath.join(src, filename));
+                if (stats) {
+                    if (stats.isFile()) {
+                        let ingroneThisFile = false;
+                        for (let ignoreProjectFileKey in ignoreProjectFileContainer) {
+                            if (ignoreProjectFileContainer[ignoreProjectFileKey] == filename) {
+                                if (eval(ignoreProjectFileKey)) {
+                                    ingroneThisFile = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!ingroneThisFile) {
+                            currentFileIndex += 1;
+                            printCopyProgress(currentFileIndex, url);
+                            //对文件的名称做处理
+                            if (filename == 'ProjectNameApplication.java') { // 针对WEB项目Maven
+                                let dirUpdateToVal = firstUpReplaceReg(projectName) + 'Application.java';
+                                dest = libPath.join(dst, dirUpdateToVal);
+                            } else if (filename == 'ProjectNameApplicationTests.java') { // 针对WEB项目Maven
+                                let dirUpdateToVal = firstUpReplaceReg(projectName) + 'ApplicationTests.java';
+                                dest = libPath.join(dst, dirUpdateToVal);
+                            }
                             //创建读取流
                             readable = libFs.createReadStream(url);
-                            if (updateProjectFileContainer[filename]) {
+                            if (packageReplace || updateProjectFileContainer[filename]) {
                                 let fileUpdateObj = updateProjectFileContainer[filename];
                                 readable.on('data', (dataBuffer) => {
                                     //创建写入流
@@ -344,14 +369,31 @@ var copy = function (src, dst, resolve, projectName) {
                                 // 通过管道来传输流
                                 readable.pipe(writable);
                             }
-                        } else if (stats.isDirectory()) {
-                            if (updateProjectDirContainer[filename]) {
-                                dest = libPath.join(dst, updateProjectDirContainer[filename]);
+                        }
+                    } else if (stats.isDirectory()) {
+                        let ingroneThisDir = false;
+                        for (let ignoreProjectDirKey in ignoreProjectDirContainer) {
+                            if (ignoreProjectDirContainer[ignoreProjectDirKey] == filename) {
+                                if (eval(ignoreProjectDirKey)) {
+                                    ingroneThisDir = true;
+                                    break;
+                                }
                             }
-                            exists(url, dest, copy, resolve, projectName);
+                        }
+                        if (!ingroneThisDir) {
+                            currentFileIndex += 1;
+                            printCopyProgress(currentFileIndex, url);
+                            if (updateProjectDirContainer[filename]) {
+                                let dirUpdateToVal = updateProjectDirContainer[filename];
+                                if (dirUpdateToVal == '_PROJECT_NAME_') {
+                                    dirUpdateToVal = projectName;
+                                }
+                                dest = libPath.join(dst, dirUpdateToVal);
+                            }
+                            exists(url, dest, copy, resolve, projectName, packageReplace);
                         }
                     }
-                }, 10);
+                }
             });
         });
     } else {
@@ -361,42 +403,148 @@ var copy = function (src, dst, resolve, projectName) {
         return;
     }
 };
-function exists(url, dest, callback, resolve, projectName) {
+function exists(url, dest, callback, resolve, projectName, packageReplace) {
     libFs.exists(dest, function (exists) {
         if (exists) {
-            callback && callback(url, dest, resolve, projectName);
+            callback && callback(url, dest, resolve, projectName, packageReplace);
         } else {
             //第二个参数目录权限 ，默认0777(读写权限)
             libFs.mkdir(dest, 0777, function (err) {
                 if (err) throw err;
-                callback && callback(url, dest, resolve, projectName);
+                callback && callback(url, dest, resolve, projectName, packageReplace);
             });
         }
     });
 }
 function doFileUpdate(dataBuffer, fileUpdateObj, writable, projectName) {
     let dataCtx = dataBuffer.toString('utf8');
-    for (let fileUpdateKey in fileUpdateObj) {
-        // let fileUpdateBuffer = Buffer.from(fileUpdateKey);
-        // while (dataBuffer.indexOf(fileUpdateBuffer) >= 0) {
-        //     let updateByteStart = dataBuffer.indexOf(fileUpdateBuffer);
-        //     let updateByteEnd = updateByteStart + fileUpdateBuffer.length;
-        //     let updateTo = Buffer.from(fileUpdateObj[fileUpdateKey], 'utf8');
-        //     dataBuffer = Buffer.from(dataBuffer).fill(updateTo, updateByteStart, updateByteEnd);
-        // }
-        let updateToVal = fileUpdateObj[fileUpdateKey];
-        if (updateToVal == '_PROJECT_NAME_') {
-            updateToVal = projectName;
+    // 替换包名
+    dataCtx = dataCtx.replace(/com.nx._PROJECT_NAME_/g, 'com.nx.' + projectName);
+    // 替换指定内容
+    if (fileUpdateObj) {
+        for (let fileUpdateKey in fileUpdateObj) {
+            let updateToVal = fileUpdateObj[fileUpdateKey];
+            if (updateToVal == '_PROJECT_NAME_') {
+                updateToVal = projectName;
+            } else if (updateToVal.indexOf('_INDEXOF_PROJECT_NAME_FIRST_UP_') == 0) {
+                updateToVal = updateToVal.replace(/_INDEXOF_PROJECT_NAME_FIRST_UP_/g, firstUpReplaceReg(projectName));
+            } else if (updateToVal == '_BY_DATA_BASE_SELECTED_') {
+                if (newProjectDataBase && newProjectDataBase == 1) {
+                    // mysql
+                    updateToVal = `<dependency>
+\t\t\t<groupId>mysql</groupId>
+\t\t\t<artifactId>mysql-connector-java</artifactId>
+\t\t</dependency>`;
+                } else if (newProjectDataBase && newProjectDataBase == 2) {
+                    // sqlserver
+                    updateToVal = `<dependency>
+\t\t\t<groupId>com.microsoft.sqlserver</groupId>
+\t\t\t<artifactId>sqljdbc4</artifactId>
+\t\t\t<version>4.0</version>
+\t\t</dependency>`;
+                }
+            } else if (updateToVal == '_BY_PAGE_SHOW_SELECTED_TYPE_') {
+                if (newProjectSelectedPageShowType && newProjectSelectedPageShowType == 1) {
+                    // thymeleaf
+                    updateToVal = `<dependency>
+\t\t\t<groupId>org.springframework.boot</groupId>
+\t\t\t<artifactId>spring-boot-starter-thymeleaf</artifactId>
+\t\t</dependency>`;
+                } else if (newProjectSelectedPageShowType && newProjectSelectedPageShowType == 2) {
+                    // jsp
+                    updateToVal = `<dependency>
+\t\t\t<groupId>org.springframework.boot</groupId>
+\t\t\t<artifactId>spring-boot-starter-tomcat</artifactId>
+\t\t\t<scope>provided</scope>
+\t\t</dependency>
+\t\t<dependency>
+\t\t\t<groupId>org.apache.tomcat.embed</groupId>
+\t\t\t<artifactId>tomcat-embed-jasper</artifactId>
+\t\t\t<scope>provided</scope>
+\t\t</dependency>
+\t\t<dependency>
+\t\t\t<groupId>javax.servlet</groupId>
+\t\t\t<artifactId>javax.servlet-api</artifactId>
+\t\t\t<scope>provided</scope>
+\t\t</dependency>
+\t\t<dependency>
+\t\t\t<groupId>javax.servlet</groupId>
+\t\t\t<artifactId>jstl</artifactId>
+\t\t</dependency>`;
+                }
+            } else if (updateToVal == '_BY_PAGE_SHOW_SELECTED_TYPE_TO_SET_PROPERTIES_') {
+                // 根据页面显示方式，设置项目的 application.properties 相关参数
+                if (newProjectSelectedPageShowType && newProjectSelectedPageShowType == 1) {
+                    // thymeleaf
+                    updateToVal = `#thymeleaf
+spring.thymeleaf.prefix=classpath:/templates/
+spring.thymeleaf.suffix=.html
+spring.thymeleaf.mode=HTML5
+spring.thymeleaf.encoding=UTF-8
+spring.thymeleaf.content-type=text/html
+spring.thymeleaf.cache=false`;
+                } else if (newProjectSelectedPageShowType && newProjectSelectedPageShowType == 2) {
+                    // jsp
+                    updateToVal = `#jsp
+spring.mvc.view.prefix=views/
+spring.mvc.view.suffix=.jsp`;
+                }
+            } else if (updateToVal == '_BY_DATA_BASE_SOURCE_URL_TO_SET_PROPERTIES_') {
+                updateToVal = newProjectDataBaseUrl;
+            } else if (updateToVal == '_BY_DATA_BASE_SOURCE_USERNAME_TO_SET_PROPERTIES_') {
+                updateToVal = newProjectDataBaseUserName;
+            } else if (updateToVal == '_BY_DATA_BASE_SOURCE_PASSWORD_TO_SET_PROPERTIES_') {
+                updateToVal = newProjectDataBasePassWord;
+            } else if (updateToVal == '_BY_DATA_BASE_DRIVER_CLASS_NAME_TO_SET_PROPERTIES_') {
+                if (newProjectDataBase && newProjectDataBase == 1) {
+                    // mysql
+                    updateToVal = `com.mysql.jdbc.Driver`;
+                } else if (newProjectDataBase && newProjectDataBase == 2) {
+                    // sqlserver
+                    updateToVal = `com.microsoft.sqlserver.jdbc.SQLServerDriver`;
+                }
+            } else if (updateToVal == '_BY_DATA_BASE_DIALECT_TO_SET_PROPERTIES_') {
+                if (newProjectDataBase && newProjectDataBase == 1) {
+                    // mysql
+                    updateToVal = `org.hibernate.dialect.MySQLDialect`;
+                } else if (newProjectDataBase && newProjectDataBase == 2) {
+                    // sqlserver
+                    updateToVal = `org.hibernate.dialect.SQLServerDialect`;
+                }
+            }
+            dataCtx = dataCtx.replace(eval('/' + fileUpdateKey + '/g'), updateToVal);
         }
-        dataCtx = dataCtx.replace(eval('/' + fileUpdateKey + '/g'), updateToVal);
     }
     return writable.write(dataCtx, 'utf8');
 }
+// 输出打印文件解析进度
+function printCopyProgress(currentFileIndex, url) {
+    var progressVal = currentFileIndex / fileTotalLength;
+    var progressStr = getProgressTxt(progressVal);
+    var outputContent = util.format(styles.blackBG[0] + '%s' + styles.blackBG[1] + '[' + progressStr + '] [ %d% ] ', '解析文件 -> ' + url, (currentFileIndex * 100 / fileTotalLength).toFixed(2));
+
+    //将光标移动到已经写入的字符前面
+    readline.moveCursor(rl.output, cursorDx * -1, cursorDy * -1);
+    //清除当前光标后的所有文字信息，以便接下来输出信息能写入到控制台
+    readline.clearScreenDown(rl.output);
+    rl.output.write(outputContent);
+    dxInfo = getStrOccRowColumns(outputContent);
+    cursorDx = dxInfo.columns;
+    cursorDy = dxInfo.rows;
+
+    console.log('');
+    if (fileTotalLength == currentFileIndex) {
+        rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + '[' + progressStr + '] [ %d% ] ' + '解析完成', '解析文件 -> ', 100));
+        rl.prompt();
+        console.log('');
+    }
+}
 // 获取进度条文本
 function getProgressTxt(currentProgress) {
+    let allProgressDiamondsCount = 20;
     let progressTxt = '';
-    let hasCompliteProgress = Math.floor(currentProgress * 20);
-    let waitProgress = 20 - hasCompliteProgress;
+    let hasCompliteProgress = Math.floor(currentProgress * allProgressDiamondsCount);
+    let waitProgress = allProgressDiamondsCount - hasCompliteProgress;
     for (let h = 0; h < hasCompliteProgress; h++) {
         progressTxt += '■';
     }
@@ -406,48 +554,223 @@ function getProgressTxt(currentProgress) {
     return progressTxt;
 }
 
+// 首字母大写
+function firstUpReplaceReg(str) {
+    str = str.toLowerCase();
+    return str.replace(/\b(\w)|\s(\w)/g, function (m) {
+        return m.toUpperCase()
+    });
+}
+
 /**
  * 构建项目框架
  */
-var buildProject = function (projectFilePath, updateCtx) {
-    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入项目名称：'), (projectName) => {
-        if (projectName) {
-            rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入项目保存路径（默认当前路径）：'), (projectSavePath) => {
-                if (projectSavePath) {
-                    filePath = projectSavePath;
-                }
-                updateProjectDirContainer = {}; // 清空修改部分容器对象
-                updateProjectFileContainer = {}; // 清空修改部分容器对象
-                updateProjectDirContainer._PROJECT_NAME_ = projectName;
-                if (updateCtx) {
-                    if (updateCtx.dir) {
-                        for (let updateDirKey in updateCtx.dir) {
-                            updateProjectDirContainer[updateDirKey] = updateCtx.dir[updateDirKey];
-                        }
-                    }
-                    if (updateCtx.file) {
-                        for (let updateFileKey in updateCtx.file) {
-                            updateProjectFileContainer[updateFileKey] = updateCtx.file[updateFileKey];
-                        }
-                    }
-                }
-                new Promise(function (resolve) {
-                    console.log('');
-                    let filesList = geFileList(projectFilePath);
-                    fileTotalLength = filesList.length;
-                    copy(projectFilePath, filePath, resolve, projectName);
-                }).then(function (value) {
-                    rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ' + filePath, '项目构建完成，保存路径为：'));
-                    rl.prompt();
-                    rl.close();
+var buildWebProject = function (projectFilePath, updateCtx) {
+    askProjectName(function (projectName) {
+        askProjectSavePath(function () {
+            askProjectUseDataBase(function (projectDataBase) {
+                askProjectUseDataBaseURL(projectDataBase, function (projectDataBaseUrl) {
+                    askProjectUseDataBaseUserName(function (projectDataBaseUserName) {
+                        askProjectUseDataBasePassWord(function (projectDataBasePassWord) {
+                            askProjectPageShowType(function (selectedPageShowType) {
+                                askProjectIfAddUserTb(function (projectAddUserTb) {
+                                    newProjectDataBase = projectDataBase;
+                                    newProjectDataBaseUrl = projectDataBaseUrl;
+                                    newProjectDataBaseUserName = projectDataBaseUserName;
+                                    newProjectDataBasePassWord = projectDataBasePassWord;
+                                    newProjectSelectedPageShowType = selectedPageShowType;
+                                    newProjectAddUserTb = projectAddUserTb;
+                                    updateProjectDirContainer = {}; // 清空修改部分容器对象
+                                    updateProjectFileContainer = {}; // 清空修改部分容器对象
+                                    ignoreProjectDirContainer = {}; // 清空忽略文件夹部分容器
+                                    ignoreProjectFileContainer = {}; // 清空忽略文件部分容器
+                                    updateProjectDirContainer._PROJECT_NAME_ = projectName;
+                                    let packageReplace = false;
+                                    if (updateCtx) {
+                                        if (updateCtx.packageReplace) {
+                                            packageReplace = updateCtx.packageReplace;
+                                        }
+                                        if (updateCtx.dir) {
+                                            for (let updateDirKey in updateCtx.dir) {
+                                                updateProjectDirContainer[updateDirKey] = updateCtx.dir[updateDirKey];
+                                            }
+                                        }
+                                        if (updateCtx.file) {
+                                            for (let updateFileKey in updateCtx.file) {
+                                                updateProjectFileContainer[updateFileKey] = updateCtx.file[updateFileKey];
+                                            }
+                                        }
+                                        if (updateCtx.ignoreDir) {
+                                            for (let updateFileKey in updateCtx.ignoreDir) {
+                                                ignoreProjectDirContainer[updateFileKey] = updateCtx.ignoreDir[updateFileKey];
+                                            }
+                                        }
+                                        if (updateCtx.ignoreFile) {
+                                            for (let updateFileKey in updateCtx.ignoreFile) {
+                                                ignoreProjectFileContainer[updateFileKey] = updateCtx.ignoreFile[updateFileKey];
+                                            }
+                                        }
+                                    }
+                                    new Promise(function (resolve) {
+                                        console.log('');
+                                        let filesList = geFileList(projectFilePath);
+                                        fileTotalLength = filesList.length;
+                                        copy(projectFilePath, filePath, resolve, projectName, packageReplace);
+                                    }).then(function (value) {
+                                        rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ' + filePath, '项目构建完成，保存路径为：'));
+                                        rl.prompt();
+                                        rl.close();
+                                    });
+                                });
+                            });
+                        });
+                    });
                 });
             });
-        } else {
-            console.error(styles.redBG[0] + '%s' + styles.redBG[1], '项目名称不能为空，请重新输入');
-            buildProject(projectFilePath, updateCtx);
-        }
+        });
     });
 };
+
+// 询问项目名称
+function askProjectName(callback) {
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入项目名称：'), (projectName) => {
+        if (projectName) {
+            if (callback && typeof callback === 'function') {
+                callback(projectName.trim());
+            }
+        } else {
+            console.error(styles.redBG[0] + '%s' + styles.redBG[1], '项目名称不能为空，请重新输入');
+            askProjectName(callback);
+        }
+    });
+}
+
+// 询问项目保存地址
+function askProjectSavePath(callback) {
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入项目保存路径（默认当前路径）：'), (projectSavePath) => {
+        if (projectSavePath) {
+            filePath = projectSavePath;
+        }
+        if (callback && typeof callback === 'function') {
+            callback();
+        }
+    });
+}
+
+// 询问项目使用的数据库
+function askProjectUseDataBase(callback) {
+    let dataBaseTypes = '⑴ mysql   ⑵ sqlserver';
+    let dataBaseTypesArr = ['1', '2'];
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '选择项目使用的数据库〖' + dataBaseTypes + '〗，输入序号（默认使用 mysql）：'), (projectDataBase) => {
+        let selectedDataBaseType = '1';
+        if (projectDataBase.trim()) {
+            if (dataBaseTypesArr.contains(projectDataBase.trim())) {
+                selectedDataBaseType = projectDataBase.trim();
+                if (callback && typeof callback === 'function') {
+                    callback(selectedDataBaseType);
+                }
+            } else {
+                console.error(styles.redBG[0] + '%s' + styles.redBG[1], '输入无效，请重新选择');
+                askProjectUseDataBase(callback);
+            }
+        } else {
+            if (callback && typeof callback === 'function') {
+                callback(selectedDataBaseType);
+            }
+        }
+    });
+}
+
+// 询问项目使用数据库的URL
+function askProjectUseDataBaseURL(selectedDataBaseType, callback) {
+    let dataBaseUrlInputPre = '';
+    if (selectedDataBaseType == 1) {
+        dataBaseUrlInputPre = 'jdbc:mysql://';
+    } else if (selectedDataBaseType == 2) {
+        dataBaseUrlInputPre = 'jdbc:sqlserver://';
+    }
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ' + dataBaseUrlInputPre, '输入项目使用的数据库 url：'), (projectDataBaseUrl) => {
+        if (projectDataBaseUrl.trim()) {
+            if (callback && typeof callback === 'function') {
+                callback(dataBaseUrlInputPre + projectDataBaseUrl.trim());
+            }
+        } else {
+            console.error(styles.redBG[0] + '%s' + styles.redBG[1], '输入无效，请重新输入');
+            askProjectUseDataBaseURL(selectedDataBaseType, callback);
+        }
+    });
+}
+
+// 询问项目使用数据库的username
+function askProjectUseDataBaseUserName(callback) {
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入项目使用的数据库 username：'), (projectDataBaseUserName) => {
+        if (projectDataBaseUserName.trim()) {
+            if (callback && typeof callback === 'function') {
+                callback(projectDataBaseUserName.trim());
+            }
+        } else {
+            console.error(styles.redBG[0] + '%s' + styles.redBG[1], '输入无效，请重新输入');
+            askProjectUseDataBaseUserName(callback);
+        }
+    });
+}
+
+// 询问项目使用数据库的password
+function askProjectUseDataBasePassWord(callback) {
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入项目使用的数据库 password'), (projectDataBasePassWord) => {
+        if (projectDataBasePassWord.trim()) {
+            if (callback && typeof callback === 'function') {
+                callback(projectDataBasePassWord.trim());
+            }
+        } else {
+            console.error(styles.redBG[0] + '%s' + styles.redBG[1], '输入无效，请重新输入');
+            askProjectUseDataBasePassWord(callback);
+        }
+    });
+}
+
+// 询问项目将使用的页面展示方式
+function askProjectPageShowType(callback) {
+    let pageShowTypes = '⑴ thymeleaf   ⑵ jsp';
+    let pageShowTypesArr = ['1', '2'];
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '选择项目使用的页面展示方式〖' + pageShowTypes + '〗，输入序号（默认使用 thymeleaf）：'), (projectPageShowType) => {
+        let selectedPageShowType = '1';
+        if (projectPageShowType.trim()) {
+            if (pageShowTypesArr.contains(projectPageShowType.trim())) {
+                selectedPageShowType = projectPageShowType.trim();
+                if (callback && typeof callback === 'function') {
+                    callback(selectedPageShowType);
+                }
+            } else {
+                console.error(styles.redBG[0] + '%s' + styles.redBG[1], '输入无效，请重新选择');
+                askProjectPageShowType(callback);
+            }
+        } else {
+            if (callback && typeof callback === 'function') {
+                callback(selectedPageShowType);
+            }
+        }
+    });
+}
+
+// 询问项目是否添加基础的用户表
+function askProjectIfAddUserTb(callback) {
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '是否添加默认用户表 Y/N（默认 Y）：'), (projectAddUserTb) => {
+        if (projectAddUserTb.trim()) {
+            if (['Y', 'N'].contains(projectAddUserTb.trim().toUpperCase())) {
+                if (callback && typeof callback === 'function') {
+                    callback(projectAddUserTb.trim());
+                }
+            } else {
+                console.error(styles.redBG[0] + '%s' + styles.redBG[1], '输入无效，请重新输入');
+                askProjectIfAddUserTb(callback);
+            }
+        }
+        if (callback && typeof callback === 'function') {
+            callback(projectAddUserTb.trim());
+        }
+    });
+}
 
 var questionSelectMenu = function () {
     rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '请选择将要执行的项目，输入序号：'), (answer) => {
@@ -458,18 +781,35 @@ var questionSelectMenu = function () {
             switch (selectIndex.trim().toUpperCase()) {
                 case '1':
                     // 构建WEB项目框架(包含数据展示及后台管理的框架)
-                    buildProject('../projectc/pros/weball/', {
-                        dir: {},
+                    buildWebProject('../projectc/pros/weball/', {
+                        packageReplace: true,
+                        dir: {
+                            _PROJECT_NAME_: '_PROJECT_NAME_'
+                        },
                         file: {
-                            '.project': {
-                                _PROJECT_NAME_: '_PROJECT_NAME_'
-                            },
-                            'org.eclipse.wst.common.component': {
-                                _PROJECT_NAME_: '_PROJECT_NAME_'
-                            },
                             'pom.xml': {
-                                _PROJECT_NAME_: '_PROJECT_NAME_'
+                                _PROJECT_NAME_: '_PROJECT_NAME_',
+                                _DATA_BASE_DEPENDENCY_: '_BY_DATA_BASE_SELECTED_',
+                                _PAGE_SHOW_TYPE_DEPENDENCY_: '_BY_PAGE_SHOW_SELECTED_TYPE_'
+                            },
+                            'application.properties': {
+                                _PAGE_SHOW_TYPE_SET_PROPERTIES_: '_BY_PAGE_SHOW_SELECTED_TYPE_TO_SET_PROPERTIES_',
+                                _DATA_BASE_SOURCE_URL_SET_PROPERTIES_: '_BY_DATA_BASE_SOURCE_URL_TO_SET_PROPERTIES_',
+                                _DATA_BASE_SOURCE_USERNAME_SET_PROPERTIES_: '_BY_DATA_BASE_SOURCE_USERNAME_TO_SET_PROPERTIES_',
+                                _DATA_BASE_SOURCE_PASSWORD_SET_PROPERTIES_: '_BY_DATA_BASE_SOURCE_PASSWORD_TO_SET_PROPERTIES_',
+                                _DATA_BASE_DRIVER_CLASS_NAME_SET_PROPERTIES_: '_BY_DATA_BASE_DRIVER_CLASS_NAME_TO_SET_PROPERTIES_',
+                                _DATA_BASE_DIALECT_SET_PROPERTIES_: '_BY_DATA_BASE_DIALECT_TO_SET_PROPERTIES_'
+                            },
+                            'ProjectNameApplication.java': {
+                                ProjectNameApplication: '_INDEXOF_PROJECT_NAME_FIRST_UP_Application'
+                            },
+                            'ProjectNameApplicationTests.java': {
+                                ProjectNameApplicationTests: '_INDEXOF_PROJECT_NAME_FIRST_UP_ApplicationTests'
                             }
+                        },
+                        ignoreDir: {
+                            'newProjectSelectedPageShowType==1': 'webapp',
+                            'newProjectSelectedPageShowType==2': 'templates'
                         }
                     });
                     break;
