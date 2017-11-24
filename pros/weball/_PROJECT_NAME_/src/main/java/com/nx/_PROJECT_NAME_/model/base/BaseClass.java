@@ -3,12 +3,14 @@ package com.nx._PROJECT_NAME_.model.base;
 import java.util.Date;
 
 import javax.persistence.Column;
+import javax.persistence.MappedSuperclass;
 
 import com.nx._PROJECT_NAME_.util.Constants;
 
 /**
  * 实体公共属性类
  */
+@MappedSuperclass
 public class BaseClass implements java.io.Serializable {
 	private static final long serialVersionUID = 1L;
 	@Column

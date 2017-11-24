@@ -330,6 +330,9 @@ var copy = function (src, dst, resolve, projectName, packageReplace) {
                             } else if (filename == 'ProjectNameApplicationTests.java') { // 针对WEB项目Maven
                                 let dirUpdateToVal = firstUpReplaceReg(projectName) + 'ApplicationTests.java';
                                 dest = libPath.join(dst, dirUpdateToVal);
+                            } else if (filename == '_project_name_.properties') { // 针对WEB项目Maven
+                                let dirUpdateToVal = projectName.toLowerCase() + '.properties';
+                                dest = libPath.join(dst, dirUpdateToVal);
                             }
                             //创建读取流
                             readable = libFs.createReadStream(url);
@@ -426,6 +429,8 @@ function doFileUpdate(dataBuffer, fileUpdateObj, writable, projectName) {
             let updateToVal = fileUpdateObj[fileUpdateKey];
             if (updateToVal == '_PROJECT_NAME_') {
                 updateToVal = projectName;
+            } else if (updateToVal == '_l_project_name_') {
+                updateToVal = projectName.toLowerCase();
             } else if (updateToVal.indexOf('_INDEXOF_PROJECT_NAME_FIRST_UP_') == 0) {
                 updateToVal = updateToVal.replace(/_INDEXOF_PROJECT_NAME_FIRST_UP_/g, firstUpReplaceReg(projectName));
             } else if (updateToVal == '_BY_DATA_BASE_SELECTED_') {
@@ -574,53 +579,10 @@ var buildWebProject = function (projectFilePath, updateCtx) {
                         askProjectUseDataBasePassWord(function (projectDataBasePassWord) {
                             askProjectPageShowType(function (selectedPageShowType) {
                                 askProjectIfAddUserTb(function (projectAddUserTb) {
-                                    newProjectDataBase = projectDataBase;
-                                    newProjectDataBaseUrl = projectDataBaseUrl;
-                                    newProjectDataBaseUserName = projectDataBaseUserName;
-                                    newProjectDataBasePassWord = projectDataBasePassWord;
-                                    newProjectSelectedPageShowType = selectedPageShowType;
-                                    newProjectAddUserTb = projectAddUserTb;
-                                    updateProjectDirContainer = {}; // 清空修改部分容器对象
-                                    updateProjectFileContainer = {}; // 清空修改部分容器对象
-                                    ignoreProjectDirContainer = {}; // 清空忽略文件夹部分容器
-                                    ignoreProjectFileContainer = {}; // 清空忽略文件部分容器
-                                    updateProjectDirContainer._PROJECT_NAME_ = projectName;
-                                    let packageReplace = false;
-                                    if (updateCtx) {
-                                        if (updateCtx.packageReplace) {
-                                            packageReplace = updateCtx.packageReplace;
-                                        }
-                                        if (updateCtx.dir) {
-                                            for (let updateDirKey in updateCtx.dir) {
-                                                updateProjectDirContainer[updateDirKey] = updateCtx.dir[updateDirKey];
-                                            }
-                                        }
-                                        if (updateCtx.file) {
-                                            for (let updateFileKey in updateCtx.file) {
-                                                updateProjectFileContainer[updateFileKey] = updateCtx.file[updateFileKey];
-                                            }
-                                        }
-                                        if (updateCtx.ignoreDir) {
-                                            for (let updateFileKey in updateCtx.ignoreDir) {
-                                                ignoreProjectDirContainer[updateFileKey] = updateCtx.ignoreDir[updateFileKey];
-                                            }
-                                        }
-                                        if (updateCtx.ignoreFile) {
-                                            for (let updateFileKey in updateCtx.ignoreFile) {
-                                                ignoreProjectFileContainer[updateFileKey] = updateCtx.ignoreFile[updateFileKey];
-                                            }
-                                        }
-                                    }
-                                    new Promise(function (resolve) {
-                                        console.log('');
-                                        let filesList = geFileList(projectFilePath);
-                                        fileTotalLength = filesList.length;
-                                        copy(projectFilePath, filePath, resolve, projectName, packageReplace);
-                                    }).then(function (value) {
-                                        rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ' + filePath, '项目构建完成，保存路径为：'));
-                                        rl.prompt();
-                                        rl.close();
-                                    });
+                                    startToBuildWebProjectWhenAskAfter(projectFilePath, updateCtx,
+                                        projectName, projectDataBase, projectDataBaseUrl,
+                                        projectDataBaseUserName, projectDataBasePassWord,
+                                        selectedPageShowType, projectAddUserTb);
                                 });
                             });
                         });
@@ -630,6 +592,83 @@ var buildWebProject = function (projectFilePath, updateCtx) {
         });
     });
 };
+
+// 询问完成，开始执行项目创建
+function startToBuildWebProjectWhenAskAfter(projectFilePath, updateCtx, projectName, projectDataBase, projectDataBaseUrl,
+    projectDataBaseUserName, projectDataBasePassWord,
+    selectedPageShowType, projectAddUserTb) {
+    newProjectDataBase = projectDataBase;
+    newProjectDataBaseUrl = projectDataBaseUrl;
+    newProjectDataBaseUserName = projectDataBaseUserName;
+    newProjectDataBasePassWord = projectDataBasePassWord;
+    newProjectSelectedPageShowType = selectedPageShowType;
+    newProjectAddUserTb = projectAddUserTb;
+    updateProjectDirContainer = {}; // 清空修改部分容器对象
+    updateProjectFileContainer = {}; // 清空修改部分容器对象
+    ignoreProjectDirContainer = {}; // 清空忽略文件夹部分容器
+    ignoreProjectFileContainer = {}; // 清空忽略文件部分容器
+    updateProjectDirContainer._PROJECT_NAME_ = projectName;
+    let packageReplace = false;
+    if (updateCtx) {
+        if (updateCtx.packageReplace) {
+            packageReplace = updateCtx.packageReplace;
+        }
+        if (updateCtx.dir) {
+            for (let updateDirKey in updateCtx.dir) {
+                updateProjectDirContainer[updateDirKey] = updateCtx.dir[updateDirKey];
+            }
+        }
+        if (updateCtx.file) {
+            for (let updateFileKey in updateCtx.file) {
+                updateProjectFileContainer[updateFileKey] = updateCtx.file[updateFileKey];
+            }
+        }
+        if (updateCtx.ignoreDir) {
+            for (let updateFileKey in updateCtx.ignoreDir) {
+                ignoreProjectDirContainer[updateFileKey] = updateCtx.ignoreDir[updateFileKey];
+            }
+        }
+        if (updateCtx.ignoreFile) {
+            for (let updateFileKey in updateCtx.ignoreFile) {
+                ignoreProjectFileContainer[updateFileKey] = updateCtx.ignoreFile[updateFileKey];
+            }
+        }
+    }
+    libFs.exists(libPath.join(filePath, ''), function (savePathExists) {
+        if (savePathExists) {
+            libFs.exists(libPath.join(filePath, projectName), function (projectDirExists) {
+                if (!projectDirExists) {
+                    new Promise(function (resolve) {
+                        console.log('');
+                        let filesList = geFileList(projectFilePath);
+                        fileTotalLength = filesList.length;
+                        copy(projectFilePath, filePath, resolve, projectName, packageReplace);
+                    }).then(function (value) {
+                        rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ' + filePath, '项目构建完成，保存路径为：'));
+                        rl.prompt();
+                        rl.close();
+                    });
+                } else {
+                    console.error(styles.redBG[0] + '%s' + styles.redBG[1], '项目保存路径下存在同名的文件夹，请重新输入');
+                    askProjectName(function (projectName) {
+                        startToBuildWebProjectWhenAskAfter(projectFilePath, updateCtx,
+                            projectName, projectDataBase, projectDataBaseUrl,
+                            projectDataBaseUserName, projectDataBasePassWord,
+                            selectedPageShowType, projectAddUserTb);
+                    });
+                }
+            });
+        } else {
+            console.error(styles.redBG[0] + '%s' + styles.redBG[1], '项目保存路径不存在，请重新输入');
+            askProjectSavePath(function () {
+                startToBuildWebProjectWhenAskAfter(projectFilePath, updateCtx,
+                    projectName, projectDataBase, projectDataBaseUrl,
+                    projectDataBaseUserName, projectDataBasePassWord,
+                    selectedPageShowType, projectAddUserTb);
+            });
+        }
+    });
+}
 
 // 询问项目名称
 function askProjectName(callback) {
@@ -650,6 +689,8 @@ function askProjectSavePath(callback) {
     rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入项目保存路径（默认当前路径）：'), (projectSavePath) => {
         if (projectSavePath) {
             filePath = projectSavePath;
+        } else {
+            filePath = libPath.resolve(); // 获取当前目录绝对路径
         }
         if (callback && typeof callback === 'function') {
             callback();
@@ -684,15 +725,17 @@ function askProjectUseDataBase(callback) {
 // 询问项目使用数据库的URL
 function askProjectUseDataBaseURL(selectedDataBaseType, callback) {
     let dataBaseUrlInputPre = '';
+    let sslSet = '';
     if (selectedDataBaseType == 1) {
         dataBaseUrlInputPre = 'jdbc:mysql://';
+        sslSet = '?useSSL=false';
     } else if (selectedDataBaseType == 2) {
         dataBaseUrlInputPre = 'jdbc:sqlserver://';
     }
     rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ' + dataBaseUrlInputPre, '输入项目使用的数据库 url：'), (projectDataBaseUrl) => {
         if (projectDataBaseUrl.trim()) {
             if (callback && typeof callback === 'function') {
-                callback(dataBaseUrlInputPre + projectDataBaseUrl.trim());
+                callback(dataBaseUrlInputPre + projectDataBaseUrl.trim() + sslSet);
             }
         } else {
             console.error(styles.redBG[0] + '%s' + styles.redBG[1], '输入无效，请重新输入');
@@ -717,7 +760,7 @@ function askProjectUseDataBaseUserName(callback) {
 
 // 询问项目使用数据库的password
 function askProjectUseDataBasePassWord(callback) {
-    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入项目使用的数据库 password'), (projectDataBasePassWord) => {
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入项目使用的数据库 password：'), (projectDataBasePassWord) => {
         if (projectDataBasePassWord.trim()) {
             if (callback && typeof callback === 'function') {
                 callback(projectDataBasePassWord.trim());
@@ -765,9 +808,10 @@ function askProjectIfAddUserTb(callback) {
                 console.error(styles.redBG[0] + '%s' + styles.redBG[1], '输入无效，请重新输入');
                 askProjectIfAddUserTb(callback);
             }
-        }
-        if (callback && typeof callback === 'function') {
-            callback(projectAddUserTb.trim());
+        } else {
+            if (callback && typeof callback === 'function') {
+                callback(projectAddUserTb.trim());
+            }
         }
     });
 }
@@ -805,11 +849,18 @@ var questionSelectMenu = function () {
                             },
                             'ProjectNameApplicationTests.java': {
                                 ProjectNameApplicationTests: '_INDEXOF_PROJECT_NAME_FIRST_UP_ApplicationTests'
+                            },
+                            'Constants.java': {
+                                _PROJECT_NAME_: '_PROJECT_NAME_',
+                                _project_name_: '_l_project_name_'
                             }
                         },
                         ignoreDir: {
                             'newProjectSelectedPageShowType==1': 'webapp',
                             'newProjectSelectedPageShowType==2': 'templates'
+                        },
+                        ignoreFile: {
+                            'newProjectAddUserTb=="N"': 'UserInfo.java'
                         }
                     });
                     break;
