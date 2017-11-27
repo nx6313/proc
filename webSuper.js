@@ -1004,7 +1004,7 @@ var questionSelectMenu = function (doForType) {
                     // 构建WEB项目框架(包含数据展示及后台管理的框架)
                     let webProjectModePath = '../projectc/pros/weball/';
                     if (doForType == 'forD') {
-                        webProjectModePath = libPath.join('D:/nx-proc/node_modules/', webProjectModePath);
+                        webProjectModePath = libPath.join('D:/nx-proc/node_modules/', 'projectc/pros/weball/');
                     }
                     buildWebProject(webProjectModePath, {
                         packageReplace: true,
@@ -1061,7 +1061,7 @@ var questionSelectMenu = function (doForType) {
                     // 构建手机端WebApp框架
                     let webAppProjectModePath = '../projectc/pros/webapp/';
                     if (doForType == 'forD') {
-                        webAppProjectModePath = libPath.join('D:/nx-proc/node_modules/', webAppProjectModePath);
+                        webAppProjectModePath = libPath.join('D:/nx-proc/node_modules/', 'projectc/pros/webapp/');
                     }
                     buildWebAppProject(webAppProjectModePath, {
                         dir: {
