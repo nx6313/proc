@@ -579,7 +579,11 @@ function firstUpReplaceReg(str) {
  * 构建WEB项目框架
  */
 var buildWebProject = function (projectFilePath, updateCtx) {
-    projectFilePath = libPath.join('D:/nx-proc/node_modules/', projectFilePath);
+    let curAbsPath = libPath.parse(libPath.resolve());
+    let zhiDingPath = libPath.parse('C:\\nx-proc');
+    if (curAbsPath.dir == zhiDingPath.dir) {
+        projectFilePath = libPath.join('D:/nx-proc/node_modules/', projectFilePath);
+    }
     askProjectName(function (projectName) {
         askProjectSavePath(function () {
             askProjectUseDataBase(function (projectDataBase) {
@@ -606,7 +610,11 @@ var buildWebProject = function (projectFilePath, updateCtx) {
  * 构建WEBAPP项目框架
  */
 var buildWebAppProject = function (projectFilePath, updateCtx) {
-    projectFilePath = libPath.join('D:/nx-proc/node_modules/', projectFilePath);
+    let curAbsPath = libPath.parse(libPath.resolve());
+    let zhiDingPath = libPath.parse('D:\\nx-proc');
+    if (curAbsPath.dir == zhiDingPath.dir) {
+        projectFilePath = libPath.join('D:/nx-proc/node_modules/', projectFilePath);
+    }
     askProjectName(function (projectName) {
         askProjectAppPacketName(function (packetName) {
             askProjectAppShowName(function (appShowName) {
@@ -990,7 +998,7 @@ var questionSelectMenu = function () {
             switch (selectIndex.trim().toUpperCase()) {
                 case '1':
                     // 构建WEB项目框架(包含数据展示及后台管理的框架)
-                    buildWebProject('projectc/pros/weball/', {
+                    buildWebProject('../projectc/pros/weball/', {
                         packageReplace: true,
                         dir: {
                             _PROJECT_NAME_: '_PROJECT_NAME_'
@@ -1043,7 +1051,7 @@ var questionSelectMenu = function () {
                     break;
                 case '5':
                     // 构建手机端WebApp框架
-                    buildWebAppProject('projectc/pros/webapp/', {
+                    buildWebAppProject('../projectc/pros/webapp/', {
                         dir: {
                             _WEB_APP_: '_PROJECT_NAME_'
                         },
