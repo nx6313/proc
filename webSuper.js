@@ -1102,10 +1102,8 @@ var questionSelectMenu = function (doForType) {
                                 console.error(`exec error: ${error}`);
                                 return;
                             }
-                            console.log(`stdout: ${stdout}`);
-                            console.log(`stderr: ${stderr}`);
                             askJPushAppKey((appKey) => {
-                                let installJPushCommand = 'ionic cordova plugin add jpush-phonegap-plugin --variable APP_KEY=' + appKey;
+                                let installJPushCommand = 'cordova plugin add jpush-phonegap-plugin --variable APP_KEY=' + appKey;
                                 console.log('');
                                 console.log(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', ' > ' + installJPushCommand));
                                 const bat = exec(installJPushCommand, (error, stdout, stderr) => {
