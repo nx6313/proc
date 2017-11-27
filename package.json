@@ -4,7 +4,7 @@
   "description": "simple to create project frame",
   "main": "index.js",
   "scripts": {
-    "ptc": "node ./"
+    "ptc": "node D:\\proc\\node_modules\\projectc"
   },
   "keywords": [
     "proc"
