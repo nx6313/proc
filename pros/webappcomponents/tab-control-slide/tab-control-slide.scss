@@ -1,0 +1,19 @@
+tab-control-slide {
+    .slide-title {
+        width: 100%;
+        color: #666666;
+        padding: 0;
+    }
+    .slide-title-unit {
+        padding-bottom: 2px;
+        font-size: 14px;
+        height: 3rem;
+        line-height: 3rem;
+    }
+    .slide-title-active {
+        color: #4d4b4b;
+        font-weight: bold;
+        background: #ffdddd;
+        border-bottom: 3px solid #eb4614;
+    }
+}

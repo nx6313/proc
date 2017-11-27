@@ -40,6 +40,7 @@ var libFs = require("fs"); //文件系统模块
 var libPath = require("path"); //路径解析模块
 var readline = require('readline'); //用户输入读取模块
 var util = require('util'); //工具包模块
+var exec = require('child_process').exec;
 /******************************************* 服务器封装开始 ********************************************* */
 //依据路径获取返回内容类型字符串,用于http返回头
 var funGetContentType = function (filePath) {
@@ -166,11 +167,11 @@ function startInPort(webSvr, portNum) {
 var menuIndexArr = [];
 var showMenu = function () {
     let menuArr = [
-        '构建WEB项目框架(包含数据展示及后台管理的框架)', '构建WEB数据展示框架', '构建WEB后台管理框架', '构建微信公众号框架',
+        '构建WEB项目框架(包含数据展示及后台管理的框架)', '构建WEB后台接口程序框架', '构建微信公众号框架',
         '构建微信小程序框架', '构建手机端WebApp框架'
     ];
     let menuSuperArr = [
-        // '启动独立服务器'
+        '为WebApp项目导入想要的组件', '为WebApp项目集成JPush'
     ];
     console.log('');
     console.log('================ 操作菜单 ================');
@@ -291,6 +292,7 @@ var getStrOccRowColumns = function (str) {
     }
 };
 
+var projectConfigSetContainer = {}; // 需要修改的项目相关配置信息，由提问获取
 var updateProjectDirContainer = {}; // 需要修改的文件夹相关内容
 var updateProjectFileContainer = {}; // 需要修改的文件相关内容
 var ignoreProjectDirContainer = {}; // 需要忽略掉的文件夹
@@ -308,95 +310,97 @@ var copy = function (src, dst, resolve, projectName, packageReplace) {
             files.forEach(function (filename, thisFolderFileIndex) {
                 var url = libPath.join(src, filename), dest = libPath.join(dst, filename);
 
-                let stats = libFs.statSync(libPath.join(src, filename));
-                if (stats) {
-                    if (stats.isFile()) {
-                        let ingroneThisFile = false;
-                        for (let ignoreProjectFileKey in ignoreProjectFileContainer) {
-                            if (ignoreProjectFileContainer[ignoreProjectFileKey] == filename) {
-                                if (eval(ignoreProjectFileKey)) {
-                                    ingroneThisFile = true;
-                                    break;
+                setTimeout(() => {
+                    let stats = libFs.statSync(libPath.join(src, filename));
+                    if (stats) {
+                        if (stats.isFile()) {
+                            let ingroneThisFile = false;
+                            for (let ignoreProjectFileKey in ignoreProjectFileContainer) {
+                                if (ignoreProjectFileContainer[ignoreProjectFileKey] == filename) {
+                                    if (eval(ignoreProjectFileKey)) {
+                                        ingroneThisFile = true;
+                                        break;
+                                    }
                                 }
                             }
-                        }
-                        if (!ingroneThisFile) {
-                            currentFileIndex += 1;
-                            printCopyProgress(currentFileIndex, url);
-                            //对文件的名称做处理
-                            if (filename == 'ProjectNameApplication.java') { // 针对WEB项目Maven
-                                let dirUpdateToVal = firstUpReplaceReg(projectName) + 'Application.java';
-                                dest = libPath.join(dst, dirUpdateToVal);
-                            } else if (filename == 'ProjectNameApplicationTests.java') { // 针对WEB项目Maven
-                                let dirUpdateToVal = firstUpReplaceReg(projectName) + 'ApplicationTests.java';
-                                dest = libPath.join(dst, dirUpdateToVal);
-                            } else if (filename == '_project_name_.properties') { // 针对WEB项目Maven
-                                let dirUpdateToVal = projectName.toLowerCase() + '.properties';
-                                dest = libPath.join(dst, dirUpdateToVal);
-                            }
-                            //创建读取流
-                            readable = libFs.createReadStream(url);
-                            if (packageReplace || updateProjectFileContainer[filename]) {
-                                let fileUpdateObj = updateProjectFileContainer[filename];
-                                readable.on('data', (dataBuffer) => {
+                            if (!ingroneThisFile) {
+                                currentFileIndex += 1;
+                                printCopyProgress(currentFileIndex, url);
+                                //对文件的名称做处理
+                                if (filename == 'ProjectNameApplication.java') { // 针对WEB项目Maven
+                                    let dirUpdateToVal = firstUpReplaceReg(projectName) + 'Application.java';
+                                    dest = libPath.join(dst, dirUpdateToVal);
+                                } else if (filename == 'ProjectNameApplicationTests.java') { // 针对WEB项目Maven
+                                    let dirUpdateToVal = firstUpReplaceReg(projectName) + 'ApplicationTests.java';
+                                    dest = libPath.join(dst, dirUpdateToVal);
+                                } else if (filename == '_project_name_.properties') { // 针对WEB项目Maven
+                                    let dirUpdateToVal = projectName.toLowerCase() + '.properties';
+                                    dest = libPath.join(dst, dirUpdateToVal);
+                                }
+                                //创建读取流
+                                readable = libFs.createReadStream(url);
+                                if (packageReplace || updateProjectFileContainer[filename]) {
+                                    let fileUpdateObj = updateProjectFileContainer[filename];
+                                    readable.on('data', (dataBuffer) => {
+                                        //创建写入流
+                                        writable = libFs.createWriteStream(dest, { encoding: 'utf8' });
+                                        let doUpdate = doFileUpdate(dataBuffer, fileUpdateObj, writable, projectName);
+                                        if (doUpdate === false) {
+                                            readable.pause();
+                                        }
+                                    });
+                                    readable.on('end', function () {
+                                        writable.end();
+                                        if (fileTotalLength == currentFileIndex && thisFolderFileIndex == thisFolderFileSize - 1) {
+                                            resolve({
+                                                total: fileTotalLength,
+                                                currentProgress: currentFileIndex
+                                            });
+                                        }
+                                    });
+                                    readable.on('drain', function () {
+                                        writable.resume();
+                                    });
+                                } else {
                                     //创建写入流
                                     writable = libFs.createWriteStream(dest, { encoding: 'utf8' });
-                                    let doUpdate = doFileUpdate(dataBuffer, fileUpdateObj, writable, projectName);
-                                    if (doUpdate === false) {
-                                        readable.pause();
-                                    }
-                                });
-                                readable.on('end', function () {
-                                    writable.end();
-                                    if (fileTotalLength == currentFileIndex && thisFolderFileIndex == thisFolderFileSize - 1) {
-                                        resolve({
-                                            total: fileTotalLength,
-                                            currentProgress: currentFileIndex
-                                        });
-                                    }
-                                });
-                                readable.on('drain', function () {
-                                    writable.resume();
-                                });
-                            } else {
-                                //创建写入流
-                                writable = libFs.createWriteStream(dest, { encoding: 'utf8' });
-                                writable.on('finish', () => {
-                                    if (fileTotalLength == currentFileIndex && thisFolderFileIndex == thisFolderFileSize - 1) {
-                                        resolve({
-                                            total: fileTotalLength,
-                                            currentProgress: currentFileIndex
-                                        });
-                                    }
-                                });
-                                // 通过管道来传输流
-                                readable.pipe(writable);
-                            }
-                        }
-                    } else if (stats.isDirectory()) {
-                        let ingroneThisDir = false;
-                        for (let ignoreProjectDirKey in ignoreProjectDirContainer) {
-                            if (ignoreProjectDirContainer[ignoreProjectDirKey] == filename) {
-                                if (eval(ignoreProjectDirKey)) {
-                                    ingroneThisDir = true;
-                                    break;
+                                    writable.on('finish', () => {
+                                        if (fileTotalLength == currentFileIndex && thisFolderFileIndex == thisFolderFileSize - 1) {
+                                            resolve({
+                                                total: fileTotalLength,
+                                                currentProgress: currentFileIndex
+                                            });
+                                        }
+                                    });
+                                    // 通过管道来传输流
+                                    readable.pipe(writable);
                                 }
                             }
-                        }
-                        if (!ingroneThisDir) {
-                            currentFileIndex += 1;
-                            printCopyProgress(currentFileIndex, url);
-                            if (updateProjectDirContainer[filename]) {
-                                let dirUpdateToVal = updateProjectDirContainer[filename];
-                                if (dirUpdateToVal == '_PROJECT_NAME_') {
-                                    dirUpdateToVal = projectName;
+                        } else if (stats.isDirectory()) {
+                            let ingroneThisDir = false;
+                            for (let ignoreProjectDirKey in ignoreProjectDirContainer) {
+                                if (ignoreProjectDirContainer[ignoreProjectDirKey] == filename) {
+                                    if (eval(ignoreProjectDirKey)) {
+                                        ingroneThisDir = true;
+                                        break;
+                                    }
                                 }
-                                dest = libPath.join(dst, dirUpdateToVal);
                             }
-                            exists(url, dest, copy, resolve, projectName, packageReplace);
+                            if (!ingroneThisDir) {
+                                currentFileIndex += 1;
+                                printCopyProgress(currentFileIndex, url);
+                                if (updateProjectDirContainer[filename]) {
+                                    let dirUpdateToVal = updateProjectDirContainer[filename];
+                                    if (dirUpdateToVal == '_PROJECT_NAME_') {
+                                        dirUpdateToVal = projectName;
+                                    }
+                                    dest = libPath.join(dst, dirUpdateToVal);
+                                }
+                                exists(url, dest, copy, resolve, projectName, packageReplace);
+                            }
                         }
                     }
-                }
+                }, 100);
             });
         });
     } else {
@@ -516,6 +520,10 @@ spring.mvc.view.suffix=.jsp`;
                     // sqlserver
                     updateToVal = `org.hibernate.dialect.SQLServerDialect`;
                 }
+            } else if (updateToVal == '_THIS_APP_PACKET_NAME_') {
+                updateToVal = projectConfigSetContainer.WEB_APP_PACKET_NAME;
+            } else if (updateToVal == '_THIS_APP_NAME_') {
+                updateToVal = projectConfigSetContainer.WEB_APP_SHOW_NAME;
             }
             dataCtx = dataCtx.replace(eval('/' + fileUpdateKey + '/g'), updateToVal);
         }
@@ -526,7 +534,7 @@ spring.mvc.view.suffix=.jsp`;
 function printCopyProgress(currentFileIndex, url) {
     var progressVal = currentFileIndex / fileTotalLength;
     var progressStr = getProgressTxt(progressVal);
-    var outputContent = util.format(styles.blackBG[0] + '%s' + styles.blackBG[1] + '[' + progressStr + '] [ %d% ] ', '解析文件 -> ' + url, (currentFileIndex * 100 / fileTotalLength).toFixed(2));
+    var outputContent = util.format(styles.blackBG[0] + '%s' + styles.blackBG[1] + '[' + progressStr + '] [ %d% (%d/%d) ] ', '解析文件 -> ', (currentFileIndex * 100 / fileTotalLength).toFixed(2), currentFileIndex, fileTotalLength);
 
     //将光标移动到已经写入的字符前面
     readline.moveCursor(rl.output, cursorDx * -1, cursorDy * -1);
@@ -537,9 +545,9 @@ function printCopyProgress(currentFileIndex, url) {
     cursorDx = dxInfo.columns;
     cursorDy = dxInfo.rows;
 
-    console.log('');
+    //console.log('');
     if (fileTotalLength == currentFileIndex) {
-        rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + '[' + progressStr + '] [ %d% ] ' + '解析完成', '解析文件 -> ', 100));
+        rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + '[' + progressStr + '] [ %d% (%d/%d) ] ' + '解析完成', '解析文件 -> ', 100, currentFileIndex, fileTotalLength));
         rl.prompt();
         console.log('');
     }
@@ -568,7 +576,7 @@ function firstUpReplaceReg(str) {
 }
 
 /**
- * 构建项目框架
+ * 构建WEB项目框架
  */
 var buildWebProject = function (projectFilePath, updateCtx) {
     askProjectName(function (projectName) {
@@ -593,7 +601,24 @@ var buildWebProject = function (projectFilePath, updateCtx) {
     });
 };
 
-// 询问完成，开始执行项目创建
+/**
+ * 构建WEBAPP项目框架
+ */
+var buildWebAppProject = function (projectFilePath, updateCtx) {
+    askProjectName(function (projectName) {
+        askProjectAppPacketName(function (packetName) {
+            askProjectAppShowName(function (appShowName) {
+                askProjectSavePath(function () {
+                    askProjectAppType(function (appType) {
+                        startToBuildWebAppProjectWhenAskAfter(projectFilePath, updateCtx, projectName, packetName, appShowName, appType);
+                    });
+                });
+            });
+        });
+    });
+};
+
+// 询问完成，开始执行WEB项目创建
 function startToBuildWebProjectWhenAskAfter(projectFilePath, updateCtx, projectName, projectDataBase, projectDataBaseUrl,
     projectDataBaseUserName, projectDataBasePassWord,
     selectedPageShowType, projectAddUserTb) {
@@ -603,8 +628,9 @@ function startToBuildWebProjectWhenAskAfter(projectFilePath, updateCtx, projectN
     newProjectDataBasePassWord = projectDataBasePassWord;
     newProjectSelectedPageShowType = selectedPageShowType;
     newProjectAddUserTb = projectAddUserTb;
-    updateProjectDirContainer = {}; // 清空修改部分容器对象
-    updateProjectFileContainer = {}; // 清空修改部分容器对象
+    projectConfigSetContainer = {}; // 清空修改的项目相关配置信息，由提问获取
+    updateProjectDirContainer = {}; // 清空修改部分文件夹容器对象
+    updateProjectFileContainer = {}; // 清空修改部分文件容器对象
     ignoreProjectDirContainer = {}; // 清空忽略文件夹部分容器
     ignoreProjectFileContainer = {}; // 清空忽略文件部分容器
     updateProjectDirContainer._PROJECT_NAME_ = projectName;
@@ -670,6 +696,76 @@ function startToBuildWebProjectWhenAskAfter(projectFilePath, updateCtx, projectN
     });
 }
 
+// 询问完成，开始执行WEBAPP项目创建
+function startToBuildWebAppProjectWhenAskAfter(projectFilePath, updateCtx, projectName, packetName, appShowName, appType) {
+    projectConfigSetContainer = {}; // 清空修改的项目相关配置信息，由提问获取
+    updateProjectDirContainer = {}; // 清空修改部分文件夹容器对象
+    updateProjectFileContainer = {}; // 清空修改部分文件容器对象
+    ignoreProjectDirContainer = {}; // 清空忽略文件夹部分容器
+    ignoreProjectFileContainer = {}; // 清空忽略文件部分容器
+    updateProjectDirContainer._WEB_APP_ = projectName;
+    // 提问得来的参数
+    projectConfigSetContainer.WEB_APP_PACKET_NAME = packetName;
+    projectConfigSetContainer.WEB_APP_SHOW_NAME = appShowName;
+    if (appType == '1') {
+        projectFilePath += 'tab/';
+    }
+    let packageReplace = false;
+    if (updateCtx) {
+        if (updateCtx.packageReplace) {
+            packageReplace = updateCtx.packageReplace;
+        }
+        if (updateCtx.dir) {
+            for (let updateDirKey in updateCtx.dir) {
+                updateProjectDirContainer[updateDirKey] = updateCtx.dir[updateDirKey];
+            }
+        }
+        if (updateCtx.file) {
+            for (let updateFileKey in updateCtx.file) {
+                updateProjectFileContainer[updateFileKey] = updateCtx.file[updateFileKey];
+            }
+        }
+        if (updateCtx.ignoreDir) {
+            for (let updateFileKey in updateCtx.ignoreDir) {
+                ignoreProjectDirContainer[updateFileKey] = updateCtx.ignoreDir[updateFileKey];
+            }
+        }
+        if (updateCtx.ignoreFile) {
+            for (let updateFileKey in updateCtx.ignoreFile) {
+                ignoreProjectFileContainer[updateFileKey] = updateCtx.ignoreFile[updateFileKey];
+            }
+        }
+    }
+    libFs.exists(libPath.join(filePath, ''), function (savePathExists) {
+        if (savePathExists) {
+            libFs.exists(libPath.join(filePath, projectName), function (projectDirExists) {
+                if (!projectDirExists) {
+                    new Promise(function (resolve) {
+                        console.log('');
+                        let filesList = geFileList(projectFilePath);
+                        fileTotalLength = filesList.length;
+                        copy(projectFilePath, filePath, resolve, projectName, packageReplace);
+                    }).then(function (value) {
+                        rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ' + filePath, '项目构建完成，保存路径为：'));
+                        rl.prompt();
+                        rl.close();
+                    });
+                } else {
+                    console.error(styles.redBG[0] + '%s' + styles.redBG[1], '项目保存路径下存在同名的文件夹，请重新输入');
+                    askProjectName(function (projectName) {
+                        startToBuildWebAppProjectWhenAskAfter(projectFilePath, updateCtx, projectName, packetName, appShowName, appType);
+                    });
+                }
+            });
+        } else {
+            console.error(styles.redBG[0] + '%s' + styles.redBG[1], '项目保存路径不存在，请重新输入');
+            askProjectSavePath(function () {
+                startToBuildWebAppProjectWhenAskAfter(projectFilePath, updateCtx, projectName, packetName, appShowName, appType);
+            });
+        }
+    });
+}
+
 // 询问项目名称
 function askProjectName(callback) {
     rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入项目名称：'), (projectName) => {
@@ -680,6 +776,58 @@ function askProjectName(callback) {
         } else {
             console.error(styles.redBG[0] + '%s' + styles.redBG[1], '项目名称不能为空，请重新输入');
             askProjectName(callback);
+        }
+    });
+}
+
+// 询问项目包名
+function askProjectAppPacketName(callback) {
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入项目包名：'), (packetName) => {
+        if (packetName) {
+            if (callback && typeof callback === 'function') {
+                callback(packetName.trim());
+            }
+        } else {
+            console.error(styles.redBG[0] + '%s' + styles.redBG[1], '项目包名不能为空，请重新输入');
+            askProjectAppPacketName(callback);
+        }
+    });
+}
+
+// 询问WebApp项目程序名称
+function askProjectAppShowName(callback) {
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入程序显示名称：'), (appShowName) => {
+        if (appShowName) {
+            if (callback && typeof callback === 'function') {
+                callback(appShowName.trim());
+            }
+        } else {
+            console.error(styles.redBG[0] + '%s' + styles.redBG[1], '项目包名不能为空，请重新输入');
+            askProjectAppShowName(callback);
+        }
+    });
+}
+
+// 询问WebApp类型（tab、...）
+function askProjectAppType(callback) {
+    let webAppTypes = '⑴ tab   ...(其他方式敬请期待)';
+    let webAppTypesArr = ['1'];
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '选择WebApp类型〖' + webAppTypes + '〗，输入序号（默认使用 tab）：'), (webAppType) => {
+        let selectedWebAppType = '1';
+        if (webAppType.trim()) {
+            if (webAppTypesArr.contains(webAppType.trim())) {
+                selectedWebAppType = webAppType.trim();
+                if (callback && typeof callback === 'function') {
+                    callback(selectedWebAppType);
+                }
+            } else {
+                console.error(styles.redBG[0] + '%s' + styles.redBG[1], '输入无效，请重新选择');
+                askProjectAppType(callback);
+            }
+        } else {
+            if (callback && typeof callback === 'function') {
+                callback(selectedWebAppType);
+            }
         }
     });
 }
@@ -816,6 +964,21 @@ function askProjectIfAddUserTb(callback) {
     });
 }
 
+// 询问JPush的appKey
+function askJPushAppKey(callback) {
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入你的WebApp应用程序在极光推送注册获得的 AppKey：'), (appKey) => {
+        if (appKey.trim()) {
+            if (callback && typeof callback === 'function') {
+                rl.close();
+                callback(appKey.trim());
+            }
+        } else {
+            console.error(styles.redBG[0] + '%s' + styles.redBG[1], '输入无效，请重新输入');
+            askJPushAppKey(callback);
+        }
+    });
+}
+
 var questionSelectMenu = function () {
     rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '请选择将要执行的项目，输入序号：'), (answer) => {
         console.log('');
@@ -865,28 +1028,62 @@ var questionSelectMenu = function () {
                     });
                     break;
                 case '2':
-                    // 构建WEB数据展示框架
+                    // 构建WEB后台接口程序框架
                     rl.close();
                     break;
                 case '3':
-                    // 构建WEB后台管理框架
-                    rl.close();
-                    break;
-                case '4':
                     // 构建微信公众号框架
                     rl.close();
                     break;
-                case '5':
+                case '4':
                     // 构建微信小程序框架
                     rl.close();
                     break;
-                case '6':
+                case '5':
                     // 构建手机端WebApp框架
-                    rl.close();
+                    buildWebAppProject('../projectc/pros/webapp/', {
+                        dir: {
+                            _WEB_APP_: '_PROJECT_NAME_'
+                        },
+                        file: {
+                            'config.xml': {
+                                _THIS_APP_PACKET_NAME_: '_THIS_APP_PACKET_NAME_',
+                                _THIS_APP_NAME_: '_THIS_APP_NAME_'
+                            },
+                            'ionic.config.json': {
+                                _WEB_APP_: '_PROJECT_NAME_'
+                            },
+                            'package.json': {
+                                _WEB_APP_: '_PROJECT_NAME_'
+                            }
+                        },
+                        ignoreDir: {
+
+                        },
+                        ignoreFile: {
+
+                        }
+                    });
                     break;
                 case 'S1':
-                    // 启动独立服务器
-                    startNodeServer();
+                    // 为WebApp项目导入想要的组件
+                    rl.close();
+                    break;
+                case 'S2':
+                    // 为WebApp项目集成JPush
+                    askJPushAppKey((appKey) => {
+                        let installJPushCommand = 'ionic cordova plugin add jpush-phonegap-plugin --variable APP_KEY=' + appKey;
+                        console.log('');
+                        console.log(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', ' > ' + installJPushCommand));
+                        const bat = exec(installJPushCommand, (error, stdout, stderr) => {
+                            if (error) {
+                                console.error(`exec error: ${error}`);
+                                return;
+                            }
+                            console.log(`stdout: ${stdout}`);
+                            console.log(`stderr: ${stderr}`);
+                        });
+                    });
                     break;
             }
         } else {
