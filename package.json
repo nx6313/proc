@@ -4,7 +4,7 @@
   "description": "simple to create project frame",
   "main": "ws.js",
   "scripts": {
-    "ptc": "node src/ -d projectc/ws.js"
+    "ptc": "node ./projectc"
   },
   "keywords": [
     "proc"
