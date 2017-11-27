@@ -579,11 +579,6 @@ function firstUpReplaceReg(str) {
  * 构建WEB项目框架
  */
 var buildWebProject = function (projectFilePath, updateCtx) {
-    let curAbsPath = libPath.parse(libPath.resolve());
-    let zhiDingPath = libPath.parse('C:\\nx-proc');
-    if (curAbsPath.dir == zhiDingPath.dir) {
-        projectFilePath = libPath.join('D:/nx-proc/node_modules/', projectFilePath);
-    }
     askProjectName(function (projectName) {
         askProjectSavePath(function () {
             askProjectUseDataBase(function (projectDataBase) {
@@ -610,11 +605,6 @@ var buildWebProject = function (projectFilePath, updateCtx) {
  * 构建WEBAPP项目框架
  */
 var buildWebAppProject = function (projectFilePath, updateCtx) {
-    let curAbsPath = libPath.parse(libPath.resolve());
-    let zhiDingPath = libPath.parse('D:\\nx-proc');
-    if (curAbsPath.dir == zhiDingPath.dir) {
-        projectFilePath = libPath.join('D:/nx-proc/node_modules/', projectFilePath);
-    }
     askProjectName(function (projectName) {
         askProjectAppPacketName(function (packetName) {
             askProjectAppShowName(function (appShowName) {
@@ -974,6 +964,20 @@ function askProjectIfAddUserTb(callback) {
     });
 }
 
+// 询问WebApp项目所在文件夹名称
+function askWebAppProjectRootDir(callback) {
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '您的WebApp所在的文件夹名称：'), (projectRootDir) => {
+        if (projectRootDir) {
+            if (callback && typeof callback === 'function') {
+                callback(projectRootDir.trim());
+            }
+        } else {
+            console.error(styles.redBG[0] + '%s' + styles.redBG[1], '输入错误，请重新输入');
+            askWebAppProjectRootDir(callback);
+        }
+    });
+}
+
 // 询问JPush的appKey
 function askJPushAppKey(callback) {
     rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入你的WebApp应用程序在极光推送注册获得的 AppKey：'), (appKey) => {
@@ -989,7 +993,7 @@ function askJPushAppKey(callback) {
     });
 }
 
-var questionSelectMenu = function () {
+var questionSelectMenu = function (doForType) {
     rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '请选择将要执行的项目，输入序号：'), (answer) => {
         console.log('');
         let selectIndex = `${answer}`;
@@ -998,7 +1002,11 @@ var questionSelectMenu = function () {
             switch (selectIndex.trim().toUpperCase()) {
                 case '1':
                     // 构建WEB项目框架(包含数据展示及后台管理的框架)
-                    buildWebProject('../projectc/pros/weball/', {
+                    let webProjectModePath = '../projectc/pros/weball/';
+                    if (doForType == 'forD') {
+                        webProjectModePath = libPath.join('D:/nx-proc/node_modules/', webProjectModePath);
+                    }
+                    buildWebProject(webProjectModePath, {
                         packageReplace: true,
                         dir: {
                             _PROJECT_NAME_: '_PROJECT_NAME_'
@@ -1051,7 +1059,11 @@ var questionSelectMenu = function () {
                     break;
                 case '5':
                     // 构建手机端WebApp框架
-                    buildWebAppProject('../projectc/pros/webapp/', {
+                    let webAppProjectModePath = '../projectc/pros/webapp/';
+                    if (doForType == 'forD') {
+                        webAppProjectModePath = libPath.join('D:/nx-proc/node_modules/', webAppProjectModePath);
+                    }
+                    buildWebAppProject(webAppProjectModePath, {
                         dir: {
                             _WEB_APP_: '_PROJECT_NAME_'
                         },
@@ -1081,31 +1093,50 @@ var questionSelectMenu = function () {
                     break;
                 case 'S2':
                     // 为WebApp项目集成JPush
-                    askJPushAppKey((appKey) => {
-                        let installJPushCommand = 'ionic cordova plugin add jpush-phonegap-plugin --variable APP_KEY=' + appKey;
+                    askWebAppProjectRootDir((projectRootDir) => {
+                        let toProjectWebAppRootDirCommand = 'cd ' + projectRootDir;
                         console.log('');
-                        console.log(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', ' > ' + installJPushCommand));
-                        const bat = exec(installJPushCommand, (error, stdout, stderr) => {
+                        console.log(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', ' > ' + toProjectWebAppRootDirCommand));
+                        const bat = exec(toProjectWebAppRootDirCommand, (error, stdout, stderr) => {
                             if (error) {
                                 console.error(`exec error: ${error}`);
                                 return;
                             }
                             console.log(`stdout: ${stdout}`);
                             console.log(`stderr: ${stderr}`);
+                            askJPushAppKey((appKey) => {
+                                let installJPushCommand = 'ionic cordova plugin add jpush-phonegap-plugin --variable APP_KEY=' + appKey;
+                                console.log('');
+                                console.log(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', ' > ' + installJPushCommand));
+                                const bat = exec(installJPushCommand, (error, stdout, stderr) => {
+                                    if (error) {
+                                        console.error(`exec error: ${error}`);
+                                        return;
+                                    }
+                                    console.log(`stdout: ${stdout}`);
+                                    console.log(`stderr: ${stderr}`);
+                                });
+                            });
                         });
                     });
                     break;
             }
         } else {
             console.error(styles.redBG[0] + '%s' + styles.redBG[1], '输入无效，请重新输入');
-            questionSelectMenu();
+            questionSelectMenu(doForType);
         }
     });
 };
 
 var webcStart = function () {
     showMenu();
-    questionSelectMenu();
+    questionSelectMenu('normal');
+};
+
+var webcStartX = function () {
+    showMenu();
+    questionSelectMenu('forD');
 };
 
 exports.webcStart = webcStart;
+exports.webcStartX = webcStartX;

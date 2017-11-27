@@ -4,7 +4,7 @@
   "description": "simple to create project frame",
   "main": "index.js",
   "scripts": {
-    "ptcx": "node D:\\nx-proc\\node_modules\\projectc",
+    "ptcx": "node D:\\nx-proc\\node_modules\\projectc\\ws.js",
     "ptc": "node ."
   },
   "keywords": [
