@@ -2,7 +2,7 @@
   "name": "projectc",
   "version": "1.0.28",
   "description": "simple to create project frame",
-  "main": "ws.js",
+  "main": "index.js",
   "scripts": {
     "ptc": "node ./"
   },
