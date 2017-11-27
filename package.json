@@ -1,6 +1,6 @@
 {
   "name": "projectc",
-  "version": "1.0.30",
+  "version": "1.0.31",
   "description": "simple to create project frame",
   "main": "index.js",
   "scripts": {
