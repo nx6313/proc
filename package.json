@@ -1,10 +1,11 @@
 {
   "name": "projectc",
-  "version": "1.0.23",
+  "version": "1.0.36",
   "description": "simple to create project frame",
-  "main": "ws.js",
+  "main": "index.js",
   "scripts": {
-    "ptc": "node ./../projectc/ws.js"
+    "ptcx": "node D:\\nx-proc\\node_modules\\projectc\\ws.js",
+    "ptc": "node ."
   },
   "keywords": [
     "proc"
