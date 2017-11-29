@@ -28,63 +28,65 @@ export class ScrollviewComponent {
   }
 
   ngOnInit() {
-    this.platform.ready().then(() => {
-      this.initPullRef();
-    });
+    this.initPullRef();
   }
 
   initPullRef() {
-    let scrollEle: HTMLElement = this._pullrefContent.nativeElement;
-    PullToRefresh.init({
-      mainElement: scrollEle,
-      classPrefix: 'ionic-',
-      pullAreaBg: this.pullAreaBg,
-      elasticityAreaBg: null,
-      instructionsPullToRefresh: this.instructionsPullToRefresh,
-      instructionsReleaseToRefresh: this.instructionsReleaseToRefresh,
-      instructionsRefreshing: this.instructionsRefreshing,
-      iconArrow: this.iconArrow,
-      iconRefreshing: this.iconRefreshing,
-      iconZoomRate: this.iconZoomRate,
-      refTxtColor: this.refTxtColor,
-      onRefresh: () => {
-        let dataPullRefFn = this.dataPullRef;
-        return new Promise(function (resolve) {
-          dataPullRefFn.emit(resolve);
-        });
-      },
-      onRefreshAfter: (data) => {
-        this.dataPullRefAfter.emit(data);
-      },
-      onlyElasticity: (!this.pullRefSupport),
-      scrollViewHeight: this.scrollViewHeight,
-      otherElmHeight: this.bottomOtherHeight,
-      offsetWidth: scrollEle.offsetWidth,
-      offsetTop: scrollEle.offsetTop,
-      offsetLeft: scrollEle.offsetLeft,
-      shouldPullToRefresh: () => {
-        let scrollTop = scrollEle.scrollTop;
-        if (scrollTop <= 0) {
-          return true;
+    this.platform.ready().then(() => {
+      let scrollEle: HTMLElement = this._pullrefContent.nativeElement;
+      PullToRefresh.init({
+        mainElement: scrollEle,
+        classPrefix: 'ionic-',
+        pullAreaBg: this.pullAreaBg,
+        elasticityAreaBg: null,
+        instructionsPullToRefresh: this.instructionsPullToRefresh,
+        instructionsReleaseToRefresh: this.instructionsReleaseToRefresh,
+        instructionsRefreshing: this.instructionsRefreshing,
+        iconArrow: this.iconArrow,
+        iconRefreshing: this.iconRefreshing,
+        iconZoomRate: this.iconZoomRate,
+        refTxtColor: this.refTxtColor,
+        onRefresh: () => {
+          let dataPullRefFn = this.dataPullRef;
+          return new Promise(function (resolve) {
+            dataPullRefFn.emit(resolve);
+          });
+        },
+        onRefreshAfter: (data) => {
+          this.dataPullRefAfter.emit(data);
+        },
+        onlyElasticity: (!this.pullRefSupport),
+        scrollViewHeight: this.scrollViewHeight,
+        titleBarHeight: 44,
+        footerBarHeight: 'auto',
+        otherElmHeight: this.bottomOtherHeight,
+        offsetWidth: scrollEle.offsetWidth,
+        offsetTop: scrollEle.offsetTop,
+        offsetLeft: scrollEle.offsetLeft,
+        shouldPullToRefresh: () => {
+          let scrollTop = scrollEle.scrollTop;
+          if (scrollTop <= 0) {
+            return true;
+          }
+          return false;
+        },
+        shouldUpToElasticity: () => {
+          let scrollTop = scrollEle.scrollTop;
+          let clientHeight = scrollEle.clientHeight;
+          let scrollHeight = scrollEle.scrollHeight;
+          if (scrollHeight == clientHeight + scrollTop) {
+            return true;
+          }
+          return false;
         }
-        return false;
-      },
-      shouldUpToElasticity: () => {
-        let scrollTop = scrollEle.scrollTop;
-        let clientHeight = scrollEle.clientHeight;
-        let scrollHeight = scrollEle.scrollHeight;
-        if (scrollHeight == clientHeight + scrollTop) {
-          return true;
-        }
-        return false;
-      }
+      });
     });
   }
-  
-    // 提供方法，将滚动条保持在最下
-    scrollToBottom() {
-      let scrollEle: HTMLElement = this._pullrefContent.nativeElement;
-      scrollEle.scrollTop = $(scrollEle).stop().animate({ scrollTop: scrollEle.scrollHeight + 'px' }, 600);
-    }
+
+  // 提供方法，将滚动条保持在最下
+  scrollToBottom() {
+    let scrollEle: HTMLElement = this._pullrefContent.nativeElement;
+    scrollEle.scrollTop = $(scrollEle).stop().animate({ scrollTop: scrollEle.scrollHeight + 'px' }, 600);
+  }
 
 }

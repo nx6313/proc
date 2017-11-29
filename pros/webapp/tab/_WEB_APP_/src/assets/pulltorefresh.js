@@ -38,6 +38,8 @@ var PullToRefresh = (function () {
     shouldUpToElasticity: function () { return !window.scrollY; },
     onlyElasticity: true,
     scrollViewHeight: -1,
+    titleBarHeight: 0,
+    footerBarHeight: 0,
     otherElmHeight: 0,
     offsetWidth: -1,
     offsetTop: 0,
@@ -73,8 +75,8 @@ var PullToRefresh = (function () {
     var onlyElasticity = _SETTINGS.onlyElasticity;
     if (!onlyElasticity) {
       var classPrefix = _SETTINGS.classPrefix;
-      var ptrElement = _SETTINGS.ptrElement;
-      var ptrAfterElement = _SETTINGS.ptrAfterElement;
+      var ptrElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.pullRefWrap').find('div.' + classPrefix + 'ptr').get(0); // _SETTINGS.ptrElement;
+      var ptrAfterElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.' + classPrefix + 'ptr-after').get(0); // _SETTINGS.ptrAfterElement;
       var iconArrow = _SETTINGS.iconArrow;
       var iconRefreshing = _SETTINGS.iconRefreshing;
       var iconZoomRate = _SETTINGS.iconZoomRate;
@@ -109,9 +111,9 @@ var PullToRefresh = (function () {
 
   function _setupEvents() {
     function onReset() {
-      var cssProp = _SETTINGS.cssProp;
-      var ptrElement = _SETTINGS.ptrElement;
       var classPrefix = _SETTINGS.classPrefix;
+      var cssProp = _SETTINGS.cssProp;
+      var ptrElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.pullRefWrap').find('div.' + classPrefix + 'ptr').get(0); // _SETTINGS.ptrElement;
 
       ptrElement.classList.remove((classPrefix + "refresh"));
       ptrElement.style[cssProp] = '0px';
@@ -123,7 +125,7 @@ var PullToRefresh = (function () {
     function _onTouchStart(e) {
       var shouldPullToRefresh = _SETTINGS.shouldPullToRefresh;
       var shouldUpToElasticity = _SETTINGS.shouldUpToElasticity;
-      var triggerElement = _SETTINGS.mainElement;
+      var triggerElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.pullRefWrap').get(0); // _SETTINGS.mainElement
 
       if (!triggerElement.contains(e.target)) {
         return;
@@ -158,13 +160,13 @@ var PullToRefresh = (function () {
     }
 
     function _onTouchMove(e) {
-      var cssProp = _SETTINGS.cssProp;
       var classPrefix = _SETTINGS.classPrefix;
+      var cssProp = _SETTINGS.cssProp;
       var distMax = _SETTINGS.distMax;
       var distThreshold = _SETTINGS.distThreshold;
-      var ptrElement = _SETTINGS.ptrElement;
-      var ptrAfterElement = _SETTINGS.ptrAfterElement;
-      var triggerElement = _SETTINGS.mainElement;
+      var ptrElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.pullRefWrap').find('div.' + classPrefix + 'ptr').get(0); // _SETTINGS.ptrElement;
+      var ptrAfterElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.' + classPrefix + 'ptr-after').get(0); // _SETTINGS.ptrAfterElement;
+      var triggerElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.pullRefWrap').get(0); // _SETTINGS.mainElement
       var resistanceFunction = _SETTINGS.resistanceFunction;
       var onlyElasticity = _SETTINGS.onlyElasticity;
 
@@ -243,16 +245,16 @@ var PullToRefresh = (function () {
     }
 
     function _onTouchEnd(e) {
-      var ptrElement = _SETTINGS.ptrElement;
-      var ptrAfterElement = _SETTINGS.ptrAfterElement;
-      var triggerElement = _SETTINGS.mainElement;
+      var classPrefix = _SETTINGS.classPrefix;
+      var ptrElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.pullRefWrap').find('div.' + classPrefix + 'ptr').get(0); // _SETTINGS.ptrElement;
+      var ptrAfterElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.' + classPrefix + 'ptr-after').get(0); // _SETTINGS.ptrAfterElement;
+      var triggerElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.pullRefWrap').get(0); // _SETTINGS.mainElement
       var onRefresh = _SETTINGS.onRefresh;
       var onRefreshAfter = _SETTINGS.onRefreshAfter;
       var refreshTimeout = _SETTINGS.refreshTimeout;
       var distThreshold = _SETTINGS.distThreshold;
       var distReload = _SETTINGS.distReload;
       var cssProp = _SETTINGS.cssProp;
-      var classPrefix = _SETTINGS.classPrefix;
       var onlyElasticity = _SETTINGS.onlyElasticity;
 
       if (!triggerElement.contains(e.target)) {
@@ -308,7 +310,7 @@ var PullToRefresh = (function () {
     }
 
     function _onScroll() {
-      var mainElement = _SETTINGS.mainElement;
+      var mainElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.pullRefWrap').get(0); // _SETTINGS.mainElement
       var classPrefix = _SETTINGS.classPrefix;
       var shouldPullToRefresh = _SETTINGS.shouldPullToRefresh;
       var triggerElement = mainElement;
@@ -335,7 +337,7 @@ var PullToRefresh = (function () {
   }
 
   function _run() {
-    var mainElement = _SETTINGS.mainElement;
+    var mainElement = _SETTINGS.mainElement
     var getMarkup = _SETTINGS.getMarkup;
     var getStyles = _SETTINGS.getStyles;
     var classPrefix = _SETTINGS.classPrefix;
@@ -343,6 +345,8 @@ var PullToRefresh = (function () {
     var pullAreaBg = _SETTINGS.pullAreaBg;
     var elasticityAreaBg = _SETTINGS.elasticityAreaBg;
     var onlyElasticity = _SETTINGS.onlyElasticity;
+    var titleBarHeight = _SETTINGS.titleBarHeight;
+    var footerBarHeight = _SETTINGS.footerBarHeight;
     var otherElmHeight = _SETTINGS.otherElmHeight;
     var offsetWidth = _SETTINGS.offsetWidth;
     var offsetTop = _SETTINGS.offsetTop;
@@ -351,6 +355,9 @@ var PullToRefresh = (function () {
     var refTxtColor = _SETTINGS.refTxtColor;
     var triggerElement = mainElement;
     mainElement = $(triggerElement).find('div.mainContent').get(0);
+    if (footerBarHeight == 'auto') {
+      footerBarHeight = $('div.tabbar').height();
+    }
 
     if (!triggerElement.querySelector(("." + classPrefix + "ptr"))) {
       var ptr = document.createElement('div');
@@ -363,25 +370,21 @@ var PullToRefresh = (function () {
       if (offsetWidth > 0 && offsetLeft > 0) {
         ptrAfter.style.width = offsetWidth + 'px';
       }
-      let appHeaderHeight = 0;
-      if ($('ion-header.header').length > 0) {
-        appHeaderHeight = $('ion-header.header').height();
-      }
-      let pageHomeHeight = $(triggerElement).parents('page-home.ion-page').get(0).clientHeight;
-      if (scrollViewHeight > 0 && scrollViewHeight < pageHomeHeight) {
+      let pageHeight = $(triggerElement).parents('ion-content').get(0).clientHeight;
+      if (scrollViewHeight > 0 && scrollViewHeight < pageHeight) {
         ptrAfter.style.height = (scrollViewHeight) + 'px';
       } else {
-        ptrAfter.style.height = (pageHomeHeight - appHeaderHeight - offsetTop - Number(otherElmHeight)) + 'px';
+        ptrAfter.style.height = (pageHeight - titleBarHeight - offsetTop - Number(otherElmHeight)) - footerBarHeight + 'px';
       }
       mainElement.parentNode.parentNode.appendChild(ptrAfter);
       if (triggerElement !== document.body) {
         triggerElement.style.transition = '';
         triggerElement.style.transform = 'translate3d(0px, 0px, 0px)';
       }
-      if (scrollViewHeight > 0 && scrollViewHeight < pageHomeHeight) {
+      if (scrollViewHeight > 0 && scrollViewHeight < pageHeight) {
         triggerElement.style.height = (scrollViewHeight) + 'px';
       } else {
-        triggerElement.style.height = (pageHomeHeight - appHeaderHeight - offsetTop - Number(otherElmHeight)) + 'px';
+        triggerElement.style.height = (pageHeight - titleBarHeight - offsetTop - Number(otherElmHeight)) - footerBarHeight + 'px';
       }
       triggerElement.style.overflowX = 'hidden';
       triggerElement.style.overflowY = 'auto';
@@ -466,7 +469,7 @@ var PullToRefresh = (function () {
       });
 
       if (!_setup) {
-        handlers = _setupEvents();
+        handlers = new _setupEvents();
         _setup = true;
       }
 
