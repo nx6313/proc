@@ -33,6 +33,7 @@ Array.prototype.contains = function (obj) {
     return false;
 }
 
+const assert = require('assert');
 var libHttp = require('http'); //HTTP协议模块
 var libHttps = require('https'); //HTTPS协议模块
 var libUrl = require('url'); //URL解析模块
@@ -40,7 +41,7 @@ var libFs = require("fs"); //文件系统模块
 var libPath = require("path"); //路径解析模块
 var readline = require('readline'); //用户输入读取模块
 var util = require('util'); //工具包模块
-var exec = require('child_process').exec;
+var childProcess = require('child_process');
 /******************************************* 服务器封装开始 ********************************************* */
 //依据路径获取返回内容类型字符串,用于http返回头
 var funGetContentType = function (filePath) {
@@ -168,13 +169,17 @@ var menuIndexArr = [];
 var showMenu = function () {
     let menuArr = [
         '构建WEB项目框架(包含数据展示及后台管理的框架)', '构建WEB后台接口程序框架', '构建微信公众号框架',
-        '构建微信小程序框架', '构建手机端WebApp框架'
+        '构建微信小程序框架', '构建手机端WebApp框架', '构建H5活动推广页'
     ];
     let menuSuperArr = [
-        '为WebApp项目导入想要的组件', '为WebApp项目集成JPush'
+        '为WebApp项目执行 npm install 命令（ptcx支持）', '为WebApp项目导入想要的组件（ptcx支持）', '为WebApp项目集成JPush（第一步）（请确保执行过npm install）（ptcx支持）',
+        '为WebApp项目集成JPush 执行 npm install ionic2-jpush --save 命令（第二步）（ptcx支持）'
+    ];
+    let desMenu = [
+        'WebApp JPush使用说明：执行S3和S4命令后，程序中导入 import { IonJPushModule, JPushService } from "ionic2-jpush";'
     ];
     console.log('');
-    console.log('================ 操作菜单 ================');
+    console.log('================================ 操作菜单 ================================');
     console.log('');
     if (menuArr) {
         for (menuIndex = 1; menuIndex <= menuArr.length; menuIndex++) {
@@ -184,7 +189,7 @@ var showMenu = function () {
         }
     }
     if (menuArr && menuArr.length > 0 && menuSuperArr && menuSuperArr.length > 0) {
-        console.log('==========================================');
+        console.log('==========================================================================');
         console.log('');
     }
     if (menuSuperArr) {
@@ -194,7 +199,14 @@ var showMenu = function () {
             console.log(util.format(styles.cyanBG[0] + '%s' + styles.cyanBG[1] + ' ' + menuVal, ' S' + menuSuperIndex + '. '));
         }
     }
-    console.log('==========================================');
+    console.log('==========================================================================');
+    if (desMenu) {
+        for (menuDesIndex = 1; menuDesIndex <= desMenu.length; menuDesIndex++) {
+            let menuVal = desMenu[menuDesIndex - 1];
+            console.log(util.format(styles.cyanBG[0] + '%s' + styles.cyanBG[1] + ' ' + menuVal, ' 说明-' + menuDesIndex + '. '));
+        }
+    }
+    console.log('==========================================================================');
 };
 
 var rl = readline.createInterface({
@@ -325,7 +337,7 @@ var copy = function (src, dst, resolve, projectName, packageReplace) {
                             }
                             if (!ingroneThisFile) {
                                 currentFileIndex += 1;
-                                printCopyProgress(currentFileIndex, url);
+                                printCopyProgress(currentFileIndex, false, null, url);
                                 //对文件的名称做处理
                                 if (filename == 'ProjectNameApplication.java') { // 针对WEB项目Maven
                                     let dirUpdateToVal = firstUpReplaceReg(projectName) + 'Application.java';
@@ -335,6 +347,15 @@ var copy = function (src, dst, resolve, projectName, packageReplace) {
                                     dest = libPath.join(dst, dirUpdateToVal);
                                 } else if (filename == '_project_name_.properties') { // 针对WEB项目Maven
                                     let dirUpdateToVal = projectName.toLowerCase() + '.properties';
+                                    dest = libPath.join(dst, dirUpdateToVal);
+                                } else if (filename == '_ACTIVE_PAGE_NAME_.html') { // 针对ACTIVE_H5
+                                    let dirUpdateToVal = projectName.toLowerCase() + '.html';
+                                    dest = libPath.join(dst, dirUpdateToVal);
+                                } else if (filename == '_ACTIVE_PAGE_NAME_.js') { // 针对ACTIVE_H5
+                                    let dirUpdateToVal = projectName.toLowerCase() + '.js';
+                                    dest = libPath.join(dst, dirUpdateToVal);
+                                } else if (filename == '_ACTIVE_PAGE_NAME_.css') { // 针对ACTIVE_H5
+                                    let dirUpdateToVal = projectName.toLowerCase() + '.css';
                                     dest = libPath.join(dst, dirUpdateToVal);
                                 }
                                 //创建读取流
@@ -388,7 +409,7 @@ var copy = function (src, dst, resolve, projectName, packageReplace) {
                             }
                             if (!ingroneThisDir) {
                                 currentFileIndex += 1;
-                                printCopyProgress(currentFileIndex, url);
+                                printCopyProgress(currentFileIndex, false, null, url);
                                 if (updateProjectDirContainer[filename]) {
                                     let dirUpdateToVal = updateProjectDirContainer[filename];
                                     if (dirUpdateToVal == '_PROJECT_NAME_') {
@@ -524,6 +545,23 @@ spring.mvc.view.suffix=.jsp`;
                 updateToVal = projectConfigSetContainer.WEB_APP_PACKET_NAME;
             } else if (updateToVal == '_THIS_APP_NAME_') {
                 updateToVal = projectConfigSetContainer.WEB_APP_SHOW_NAME;
+            } else if (updateToVal == '_BY_ACTIVE_H5_PAGE_COUNT_') {
+                let activeH5PageCount = projectConfigSetContainer.ACTIVEH5_PAGE_COUNT;
+                for (let h5PageIndex = 0; h5PageIndex < activeH5PageCount; h5PageIndex++) {
+                    updateToVal += `<li class="pageItem pageItem${h5PageIndex + 1}">
+\t\t\t<!-- 请在此处添加第 ${h5PageIndex + 1} 页代码 -->\n
+\t\t</li>`;
+                }
+            } else if (updateToVal == '_CSS_BY_ACTIVE_H5_PAGE_COUNT_') {
+                let activeH5PageCount = projectConfigSetContainer.ACTIVEH5_PAGE_COUNT;
+                for (let h5PageIndex = 0; h5PageIndex < activeH5PageCount; h5PageIndex++) {
+                    updateToVal += `/****************** 第 ${h5PageIndex + 1} 页 ******************/
+/****** 背景图设置 ******/
+.pageItemWrap li.pageItem${h5PageIndex + 1} {
+\tbackground-image: url('');
+}
+/****** 其他样式 - 页面元素 ******/\n\n`;
+                }
             }
             dataCtx = dataCtx.replace(eval('/' + fileUpdateKey + '/g'), updateToVal);
         }
@@ -531,10 +569,17 @@ spring.mvc.view.suffix=.jsp`;
     return writable.write(dataCtx, 'utf8');
 }
 // 输出打印文件解析进度
-function printCopyProgress(currentFileIndex, url) {
-    var progressVal = currentFileIndex / fileTotalLength;
-    var progressStr = getProgressTxt(progressVal);
-    var outputContent = util.format(styles.blackBG[0] + '%s' + styles.blackBG[1] + '[' + progressStr + '] [ %d% (%d/%d) ] ', '解析文件 -> ', (currentFileIndex * 100 / fileTotalLength).toFixed(2), currentFileIndex, fileTotalLength);
+function printCopyProgress(currentFileIndex, loadingFlag, loadingTxt, url) {
+    var progressStr = '';
+    var outputContent = '';
+    if (!loadingFlag) {
+        var progressVal = currentFileIndex / fileTotalLength;
+        progressStr = getProgressTxt(progressVal);
+        outputContent = util.format(styles.blackBG[0] + '%s' + styles.blackBG[1] + '[' + progressStr + '] [ %d% (%d/%d) ] ', '解析文件 -> ', (currentFileIndex * 100 / fileTotalLength).toFixed(2), currentFileIndex, fileTotalLength);
+    } else {
+        progressStr = getProgressTxt(currentFileIndex, true);
+        outputContent = util.format(styles.blackBG[0] + '%s' + styles.blackBG[1] + '[' + progressStr + ']', loadingTxt + ' -> ');
+    }
 
     //将光标移动到已经写入的字符前面
     readline.moveCursor(rl.output, cursorDx * -1, cursorDy * -1);
@@ -546,23 +591,56 @@ function printCopyProgress(currentFileIndex, url) {
     cursorDy = dxInfo.rows;
 
     //console.log('');
-    if (fileTotalLength == currentFileIndex) {
-        rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + '[' + progressStr + '] [ %d% (%d/%d) ] ' + '解析完成', '解析文件 -> ', 100, currentFileIndex, fileTotalLength));
-        rl.prompt();
-        console.log('');
+    if (!loadingFlag) {
+        if (fileTotalLength == currentFileIndex) {
+            rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + '[' + progressStr + '] [ %d% (%d/%d) ] ' + '解析完成', '解析文件 -> ', 100, currentFileIndex, fileTotalLength));
+            rl.prompt();
+            console.log('');
+        }
     }
 }
 // 获取进度条文本
-function getProgressTxt(currentProgress) {
+function getProgressTxt(currentProgress, loadingFlag, maxLength) {
     let allProgressDiamondsCount = 20;
-    let progressTxt = '';
-    let hasCompliteProgress = Math.floor(currentProgress * allProgressDiamondsCount);
-    let waitProgress = allProgressDiamondsCount - hasCompliteProgress;
-    for (let h = 0; h < hasCompliteProgress; h++) {
-        progressTxt += '■';
+    if (maxLength) {
+        allProgressDiamondsCount = maxLength;
     }
-    for (let e = 0; e < waitProgress; e++) {
-        progressTxt += '□';
+    let progressTxt = '';
+    if (!loadingFlag) {
+        let hasCompliteProgress = Math.floor(currentProgress * allProgressDiamondsCount);
+        let waitProgress = allProgressDiamondsCount - hasCompliteProgress;
+        for (let h = 0; h < hasCompliteProgress; h++) {
+            progressTxt += '■';
+        }
+        for (let e = 0; e < waitProgress; e++) {
+            progressTxt += '□';
+        }
+    } else if (loadingFlag) {
+        let loadingProgressLength = 3;
+        let loadingProgressCount = loadingProgressLength;
+        let otherLoadingPreCount = 0;
+        let preProgressCount = currentProgress % allProgressDiamondsCount;
+        if (preProgressCount > allProgressDiamondsCount - loadingProgressCount && preProgressCount < allProgressDiamondsCount) {
+            otherLoadingPreCount = (preProgressCount + loadingProgressLength) - allProgressDiamondsCount;
+            loadingProgressCount = allProgressDiamondsCount - preProgressCount;
+            preProgressCount -= otherLoadingPreCount;
+        } else {
+            otherLoadingPreCount = 0;
+            loadingProgressCount = loadingProgressLength;
+        }
+        let afterProgressCount = allProgressDiamondsCount - preProgressCount - loadingProgressCount - otherLoadingPreCount;
+        for (let ol = 0; ol < otherLoadingPreCount; ol++) {
+            progressTxt += '■';
+        }
+        for (let p = 0; p < preProgressCount; p++) {
+            progressTxt += '□';
+        }
+        for (let l = 0; l < loadingProgressCount; l++) {
+            progressTxt += '■';
+        }
+        for (let a = 0; a < afterProgressCount; a++) {
+            progressTxt += '□';
+        }
     }
     return progressTxt;
 }
@@ -613,6 +691,17 @@ var buildWebAppProject = function (projectFilePath, updateCtx) {
                         startToBuildWebAppProjectWhenAskAfter(projectFilePath, updateCtx, projectName, packetName, appShowName, appType);
                     });
                 });
+            });
+        });
+    });
+};
+
+// 构建H5活动推广页
+var buildActiveH5Project = function (activeH5ProjectPath, updateCtx) {
+    askProjectName(function (projectName) {
+        askProjectSavePath(function () {
+            askActiveH5PageCount(function (activeH5PageCount) {
+                startToBuildActiveH5ProjectWhenAskAfter(activeH5ProjectPath, updateCtx, projectName, activeH5PageCount);
             });
         });
     });
@@ -766,6 +855,69 @@ function startToBuildWebAppProjectWhenAskAfter(projectFilePath, updateCtx, proje
     });
 }
 
+// 询问完成，开始执行ActiveH5项目创建
+function startToBuildActiveH5ProjectWhenAskAfter(activeH5ProjectPath, updateCtx, projectName, activeH5PageCount) {
+    projectConfigSetContainer = {}; // 清空修改的项目相关配置信息，由提问获取
+    updateProjectDirContainer = {}; // 清空修改部分文件夹容器对象
+    updateProjectFileContainer = {}; // 清空修改部分文件容器对象
+    ignoreProjectDirContainer = {}; // 清空忽略文件夹部分容器
+    ignoreProjectFileContainer = {}; // 清空忽略文件部分容器
+    updateProjectDirContainer._ACTIVE_H5_PROJECT_ = projectName;
+    // 提问得来的参数
+    projectConfigSetContainer.ACTIVEH5_PAGE_COUNT = activeH5PageCount;
+    let packageReplace = false;
+    if (updateCtx) {
+        if (updateCtx.dir) {
+            for (let updateDirKey in updateCtx.dir) {
+                updateProjectDirContainer[updateDirKey] = updateCtx.dir[updateDirKey];
+            }
+        }
+        if (updateCtx.file) {
+            for (let updateFileKey in updateCtx.file) {
+                updateProjectFileContainer[updateFileKey] = updateCtx.file[updateFileKey];
+            }
+        }
+        if (updateCtx.ignoreDir) {
+            for (let updateFileKey in updateCtx.ignoreDir) {
+                ignoreProjectDirContainer[updateFileKey] = updateCtx.ignoreDir[updateFileKey];
+            }
+        }
+        if (updateCtx.ignoreFile) {
+            for (let updateFileKey in updateCtx.ignoreFile) {
+                ignoreProjectFileContainer[updateFileKey] = updateCtx.ignoreFile[updateFileKey];
+            }
+        }
+    }
+    libFs.exists(libPath.join(filePath, ''), function (savePathExists) {
+        if (savePathExists) {
+            libFs.exists(libPath.join(filePath, projectName), function (projectDirExists) {
+                if (!projectDirExists) {
+                    new Promise(function (resolve) {
+                        console.log('');
+                        let filesList = geFileList(activeH5ProjectPath);
+                        fileTotalLength = filesList.length;
+                        copy(activeH5ProjectPath, filePath, resolve, projectName, packageReplace);
+                    }).then(function (value) {
+                        rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ' + filePath, '项目构建完成，保存路径为：'));
+                        rl.prompt();
+                        rl.close();
+                    });
+                } else {
+                    console.error(styles.redBG[0] + '%s' + styles.redBG[1], '项目保存路径下存在同名的文件夹，请重新输入');
+                    askProjectName(function (projectName) {
+                        startToBuildActiveH5ProjectWhenAskAfter(activeH5ProjectPath, updateCtx, projectName, activeH5PageCount);
+                    });
+                }
+            });
+        } else {
+            console.error(styles.redBG[0] + '%s' + styles.redBG[1], '项目保存路径不存在，请重新输入');
+            askProjectSavePath(function () {
+                startToBuildActiveH5ProjectWhenAskAfter(activeH5ProjectPath, updateCtx, projectName, activeH5PageCount);
+            });
+        }
+    });
+}
+
 // 询问项目名称
 function askProjectName(callback) {
     rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入项目名称：'), (projectName) => {
@@ -842,6 +994,20 @@ function askProjectSavePath(callback) {
         }
         if (callback && typeof callback === 'function') {
             callback();
+        }
+    });
+}
+
+// 询问H5活动页包含的页面数量
+function askActiveH5PageCount(callback) {
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '该H5活动页共包含几个页面：'), (activeH5PageCount) => {
+        if (activeH5PageCount && /^[1-9]+[0-9]*]*$/.test(activeH5PageCount)) {
+            if (callback && typeof callback === 'function') {
+                callback(activeH5PageCount.trim());
+            }
+        } else {
+            console.error(styles.redBG[0] + '%s' + styles.redBG[1], '活动页面数量输入有误，请重新输入');
+            askActiveH5PageCount(callback);
         }
     });
 }
@@ -993,6 +1159,87 @@ function askJPushAppKey(callback) {
     });
 }
 
+function runNpmIForWebApp(npmCommand) {
+    askWebAppProjectRootDir((projectRootDir) => {
+        // 判断项目是否存在
+        libFs.exists(libPath.join(filePath, projectRootDir), function (projectDirExists) {
+            if (projectDirExists) {
+                let npmInstallCommand = 'npm i';
+                if (npmCommand) {
+                    npmInstallCommand = npmCommand;
+                }
+                console.log('');
+                console.log(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', ' > ' + npmInstallCommand));
+
+                toggleLoading('执行中');
+                const npmInstallOptions = {
+                    cwd: projectRootDir,
+                    encoding: 'utf8'
+                };
+                const bat = childProcess.exec(npmInstallCommand, npmInstallOptions);
+                bat.stdout.on('data', (data) => {
+                    console.log('');
+                    console.log(`${data}`);
+                });
+
+                bat.stderr.on('data', (data) => {
+                    console.log('');
+                    toggleLoading();
+                    console.log(`错误： ${data}`);
+                });
+
+                bat.on('close', (code) => {
+                    console.log('');
+                    toggleLoading();
+                    rl.close();
+                });
+            } else {
+                console.error(styles.redBG[0] + '%s' + styles.redBG[1], 'WebApp项目 ' + projectRootDir + ' 不存在，请重新输入项目所在文件夹');
+                runNpmIForWebApp();
+            }
+        });
+    });
+}
+
+// 为WebApp集成JPush
+function getInToWebAppJPush() {
+    askWebAppProjectRootDir((projectRootDir) => {
+        // 判断项目是否存在
+        libFs.exists(libPath.join(filePath, projectRootDir), function (projectDirExists) {
+            if (projectDirExists) {
+                askJPushAppKey((appKey) => {
+                    let installJPushCommand = 'ionic cordova plugin add jpush-phonegap-plugin --variable APP_KEY=' + appKey;
+                    console.log('');
+                    console.log(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', ' > ' + installJPushCommand));
+
+                    //toggleLoading('执行中');
+                    const installJPushOptions = {
+                        cwd: projectRootDir,
+                        encoding: 'utf8'
+                    };
+                    const bat = childProcess.exec(installJPushCommand, installJPushOptions);
+                    bat.stdout.on('data', (data) => {
+                        console.log(`${data}`);
+                    });
+
+                    bat.stderr.on('data', (data) => {
+                        console.log(`错误： ${data}`);
+                    });
+
+                    bat.on('close', (code) => {
+                        console.log(`子进程退出码：${code}`);
+                        rl.close();
+                        //toggleLoading();
+                    });
+                });
+            } else {
+                console.error(styles.redBG[0] + '%s' + styles.redBG[1], 'WebApp项目 ' + projectRootDir + ' 不存在，请重新输入项目所在文件夹');
+                getInToWebAppJPush();
+            }
+        });
+    });
+}
+
 var questionSelectMenu = function (doForType) {
     rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '请选择将要执行的项目，输入序号：'), (answer) => {
         console.log('');
@@ -1087,36 +1334,54 @@ var questionSelectMenu = function (doForType) {
                         }
                     });
                     break;
+                case '6':
+                    // 构建H5活动推广页
+                    let activeH5ProjectModePath = '../projectc/pros/activeH5/';
+                    if (doForType == 'forD') {
+                        activeH5ProjectModePath = libPath.join('D:/nx-proc/node_modules/', 'projectc/pros/activeH5/');
+                    }
+                    buildActiveH5Project(activeH5ProjectModePath, {
+                        dir: {
+                            _ACTIVE_H5_PROJECT_: '_PROJECT_NAME_'
+                        },
+                        file: {
+                            '_ACTIVE_PAGE_NAME_.html': {
+                                _ACTIVE_PAGE_NAME_: '_PROJECT_NAME_',
+                                _ACTIVE_PAGE_ITEM_TEMPLETE_: '_BY_ACTIVE_H5_PAGE_COUNT_'
+                            },
+                            '_ACTIVE_PAGE_NAME_.js': {
+                                _ACTIVE_PAGE_NAME_: '_PROJECT_NAME_'
+                            },
+                            '_ACTIVE_PAGE_NAME_.css': {
+                                _ACTIVE_PAGE_MAIN_CSS_: '_CSS_BY_ACTIVE_H5_PAGE_COUNT_'
+                            }
+                        },
+                        ignoreDir: {
+
+                        },
+                        ignoreFile: {
+
+                        }
+                    });
+                    break;
                 case 'S1':
+                    // 为WebApp项目执行 npm install 命令
+                    runNpmIForWebApp();
+                    break;
+                case 'S2':
                     // 为WebApp项目导入想要的组件
                     rl.close();
                     break;
-                case 'S2':
-                    // 为WebApp项目集成JPush
-                    askWebAppProjectRootDir((projectRootDir) => {
-                        let toProjectWebAppRootDirCommand = 'cd ' + projectRootDir;
-                        console.log('');
-                        console.log(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', ' > ' + toProjectWebAppRootDirCommand));
-                        const bat = exec(toProjectWebAppRootDirCommand, (error, stdout, stderr) => {
-                            if (error) {
-                                console.error(`exec error: ${error}`);
-                                return;
-                            }
-                            askJPushAppKey((appKey) => {
-                                let installJPushCommand = 'cordova plugin add jpush-phonegap-plugin --variable APP_KEY=' + appKey;
-                                console.log('');
-                                console.log(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', ' > ' + installJPushCommand));
-                                const bat = exec(installJPushCommand, (error, stdout, stderr) => {
-                                    if (error) {
-                                        console.error(`exec error: ${error}`);
-                                        return;
-                                    }
-                                    console.log(`stdout: ${stdout}`);
-                                    console.log(`stderr: ${stderr}`);
-                                });
-                            });
-                        });
-                    });
+                case 'S3':
+                    // 为WebApp项目集成JPush（步骤一）
+                    // https://www.npmjs.com/package/ionic2-jpush
+                    // ionic cordova plugin add jpush-phonegap-plugin --variable APP_KEY=
+                    getInToWebAppJPush();
+                    break;
+                case 'S4':
+                    // 为WebApp项目集成JPush（步骤二）
+                    // npm install ionic2-jpush --save
+                    runNpmIForWebApp('npm i ionic2-jpush --save');
                     break;
             }
         } else {
@@ -1125,6 +1390,23 @@ var questionSelectMenu = function (doForType) {
         }
     });
 };
+
+let doingCurIndex = 0;
+let loadingTimer = null;
+function toggleLoading(tip) {
+    if (tip) {
+        if (!loadingTimer) {
+            loadingTimer = setInterval(() => {
+                doingCurIndex += 1;
+                printCopyProgress(doingCurIndex, true, tip);
+            }, 60);
+        }
+    } else {
+        clearInterval(loadingTimer);
+        doingCurIndex = 0;
+        loadingTimer = null;
+    }
+}
 
 var webcStart = function () {
     showMenu();

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { NavController } from 'ionic-angular';
 
 @Component({
@@ -9,11 +9,14 @@ export class HomePage {
   pageSlides: any;
 
   constructor(public navCtrl: NavController) {
-    this.pageSlides = [ '新闻', '美食', '中外', '中外', '中外', '中外', '中外', '中外', '中外' ];
+    this.pageSlides = ['新闻', '美食', '中外', '中外', '中外', '中外', '中外', '中外', '中外'];
+  }
+
+  ionViewDidEnter() {
   }
 
   onSlideClick(index) {
-    
+
   }
 
 }

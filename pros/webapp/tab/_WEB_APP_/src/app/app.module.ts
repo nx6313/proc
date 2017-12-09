@@ -3,6 +3,14 @@ import { BrowserModule } from '@angular/platform-browser';
 import { IonicApp, IonicModule, IonicErrorHandler } from 'ionic-angular';
 import { MyApp } from './app.component';
 import { IonicStorageModule } from '@ionic/storage';
+import { Toast } from '@ionic-native/toast';
+
+import { EventsService } from '../providers/events-service';
+import { HttpService } from '../providers/http-service';
+import { ProtocolService } from '../providers/protocol-service';
+import { StorageService } from '../providers/storage-service';
+import { UpdateService } from '../providers/update-service';
+import { UtilService } from '../providers/util-service';
 
 import { ComponentsModule } from '../components/components.module';
 
@@ -42,6 +50,13 @@ import { SplashScreen } from '@ionic-native/splash-screen';
   providers: [
     StatusBar,
     SplashScreen,
+    EventsService,
+    HttpService,
+    ProtocolService,
+    StorageService,
+    UpdateService,
+    UtilService,
+    Toast,
     { provide: ErrorHandler, useClass: IonicErrorHandler }
   ]
 })

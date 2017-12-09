@@ -18,14 +18,16 @@ export class SlideshowComponent {
   }
 
   ngOnInit() {
-    this.setScrollElementStyle('height', this.height + 'px');
-    this.slides.loop = true;
-    this.slides.autoplay = 1600;
-    this.slides.centeredSlides = true;
-    this.slides.effect = this.effect;
-    this.slides.pager = true;
-    this.slides.paginationType = this.paginationType;
-    this.slides.zoom = true;
+    if (this.contentList) {
+      this.setScrollElementStyle('height', this.height + 'px');
+      this.slides.loop = true;
+      this.slides.autoplay = 1600;
+      this.slides.centeredSlides = true;
+      this.slides.effect = this.effect;
+      this.slides.pager = true;
+      this.slides.paginationType = this.paginationType;
+      this.slides.zoom = true;
+    }
   }
 
   setScrollElementStyle(prop: string, val: any) {

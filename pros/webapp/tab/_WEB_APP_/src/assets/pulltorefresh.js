@@ -1,24 +1,27 @@
 var PullToRefresh = (function () {
   var _ptrMarkup = function () { return "<div class=\"__PREFIX__box\"><div class=\"__PREFIX__content\"><div class=\"__PREFIX__icon animated\"></div><div class=\"__PREFIX__text\"></div></div></div>"; };
 
-  var _ptrStyles = function () { return ".__PREFIX__ptr {\n __PULLWRAPBG__\n  __PULLWRAPBOXSHADOW__\n  pointer-events: none;\n  font-size: 0.85em;\n  font-weight: bold;\n  top: 0;\n  height: 0;\n  transition: height 0.3s, min-height 0.3s;\n  text-align: center;\n  width: 100%;\n  overflow: hidden;\n  display: flex;\n  align-items: flex-end;\n  align-content: stretch;\n}\n.__PREFIX__box {\n  padding: 10px;\n  flex-basis: 100%;\n}\n.__PREFIX__pull {\n  transition: none;\n}\n.__PREFIX__text {\n  margin-top: .33em;\n  color: _REF_TXT_TIP_COLOR_;\n}\n.__PREFIX__icon {\n  color: rgba(252, 252, 252, 0.8);\n  transition: transform .3s;\n}\n.__PREFIX__top {\n  touch-action: pan-x pan-down pinch-zoom;\n}\n.__PREFIX__release .__PREFIX__icon {\n  transform: rotate(180deg);\n}\n .__PREFIX__ptr-after{\n box-shadow: none !important;\n __PULLAFTERBG__\n}"; };
+  var _ptrStyles = function () { return "_PAGE_ID_ABOUT_ .__PREFIX__ptr {\n __PULLWRAPBG__\n  __PULLWRAPBOXSHADOW__\n  pointer-events: none;\n  font-size: 0.85em;\n  font-weight: bold;\n  top: 0;\n  height: 0;\n  transition: height 0.3s, min-height 0.3s;\n  text-align: center;\n  width: 100%;\n  overflow: hidden;\n  display: flex;\n  align-items: flex-end;\n  align-content: stretch;\n}\n_PAGE_ID_ABOUT_ .__PREFIX__box {\n  padding: 6px;\n  flex-basis: 100%;\n}\n_PAGE_ID_ABOUT_ .__PREFIX__pull {\n  transition: none;\n}\n_PAGE_ID_ABOUT_ .__PREFIX__text {\n  margin-top: .33em;\n  color: _REF_TXT_TIP_COLOR_;\n}\n_PAGE_ID_ABOUT_ .__PREFIX__icon {\n color: rgba(252, 252, 252, 0.8);\n  transition: transform .3s;\n}\n_PAGE_ID_ABOUT_ .__PREFIX__top {\n  touch-action: pan-x pan-down pinch-zoom;\n}\n_PAGE_ID_ABOUT_ .__PREFIX__release .__PREFIX__icon {\n  transform: rotate(180deg);\n}\n_PAGE_ID_ABOUT_ .__PREFIX__ptr-after{\n box-shadow: none !important;\n __PULLAFTERBG__\n}"; };
 
   /* eslint-disable import/no-unresolved */
 
   var _SETTINGS = {};
+  let pageSettingsContainer = {}; // 存放所有页面的各自参数容器
 
   var _defaults = {
-    distThreshold: 70,
-    distMax: 100,
-    distReload: 80,
+    distThreshold: 66,
+    distMax: 74,
+    distReload: 62,
     bodyOffset: 20,
     pullAreaBg: '',
+    elasticityTopAreaBg: '',
     elasticityAreaBg: '',
     mainElement: 'body',
     triggerElement: 'body',
     ptrElement: '.ptr',
     ptrAfterElement: '.ptr-after',
     classPrefix: 'ptr--',
+    pageIdName: '',
     cssProp: 'min-height',
     iconArrow: '&#8675;',
     iconRefreshing: '&hellip;',
@@ -33,11 +36,13 @@ var PullToRefresh = (function () {
     onInit: function () { },
     onRefresh: function () { },
     onRefreshAfter: function () { },
-    resistanceFunction: function (t) { return Math.min(1, t / 2.5); },
+    resistanceFunction: function (t) { return Math.min(1, t / 4); },
     shouldPullToRefresh: function () { return !window.scrollY; },
     shouldUpToElasticity: function () { return !window.scrollY; },
     onlyElasticity: true,
     scrollViewHeight: -1,
+    titleBarHeight: 0,
+    footerBarHeight: 0,
     otherElmHeight: 0,
     offsetWidth: -1,
     offsetTop: 0,
@@ -49,10 +54,9 @@ var PullToRefresh = (function () {
   var dist = 0;
   var distResisted = 0;
 
-  var _state = 'pending';
   var _setup = false;
   var _enable = false;
-  var _timeout;
+  var _timeout = null;
 
   var canPull = false;
   var canElasticity = false;
@@ -70,22 +74,23 @@ var PullToRefresh = (function () {
   }
 
   function _update() {
-    var onlyElasticity = _SETTINGS.onlyElasticity;
+    let curPageIdName = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').parent().get(0).localName;
+    var onlyElasticity = pageSettingsContainer[curPageIdName].onlyElasticity;
     if (!onlyElasticity) {
       var classPrefix = _SETTINGS.classPrefix;
-      var ptrElement = _SETTINGS.ptrElement;
-      var ptrAfterElement = _SETTINGS.ptrAfterElement;
+      var ptrElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.pullRefWrap').find('div.' + classPrefix + 'ptr').get(0); // _SETTINGS.ptrElement;
+      var ptrAfterElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.' + classPrefix + 'ptr-after').get(0); // _SETTINGS.ptrAfterElement;
       var iconArrow = _SETTINGS.iconArrow;
       var iconRefreshing = _SETTINGS.iconRefreshing;
       var iconZoomRate = _SETTINGS.iconZoomRate;
-      var instructionsRefreshing = _SETTINGS.instructionsRefreshing;
-      var instructionsPullToRefresh = _SETTINGS.instructionsPullToRefresh;
-      var instructionsReleaseToRefresh = _SETTINGS.instructionsReleaseToRefresh;
+      var instructionsRefreshing = pageSettingsContainer[curPageIdName].instructionsRefreshing;
+      var instructionsPullToRefresh = pageSettingsContainer[curPageIdName].instructionsPullToRefresh;
+      var instructionsReleaseToRefresh = pageSettingsContainer[curPageIdName].instructionsReleaseToRefresh;
 
       var iconEl = ptrElement.querySelector(("." + classPrefix + "icon"));
       var textEl = ptrElement.querySelector(("." + classPrefix + "text"));
 
-      if (_state === 'refreshing') {
+      if (pageSettingsContainer[curPageIdName]._state === 'refreshing') {
         iconEl.classList.add('rotate');
         iconEl.innerHTML = '<img style="width: ' + (iconZoomRate * 100) + '%;" src="' + iconRefreshing + '"/>';
       } else {
@@ -93,15 +98,15 @@ var PullToRefresh = (function () {
         iconEl.innerHTML = '<img style="width: ' + (iconZoomRate * 100) + '%;" src="' + iconArrow + '"/>';
       }
 
-      if (_state === 'releasing') {
+      if (pageSettingsContainer[curPageIdName]._state === 'releasing') {
         textEl.innerHTML = instructionsReleaseToRefresh;
       }
 
-      if (_state === 'pulling' || _state === 'pending') {
+      if (pageSettingsContainer[curPageIdName]._state === 'pulling' || pageSettingsContainer[curPageIdName]._state === 'pending') {
         textEl.innerHTML = instructionsPullToRefresh;
       }
 
-      if (_state === 'refreshing') {
+      if (pageSettingsContainer[curPageIdName]._state === 'refreshing') {
         textEl.innerHTML = instructionsRefreshing;
       }
     }
@@ -109,21 +114,23 @@ var PullToRefresh = (function () {
 
   function _setupEvents() {
     function onReset() {
-      var cssProp = _SETTINGS.cssProp;
-      var ptrElement = _SETTINGS.ptrElement;
+      let curPageIdName = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').parent().get(0).localName;
       var classPrefix = _SETTINGS.classPrefix;
+      var cssProp = _SETTINGS.cssProp;
+      var ptrElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.pullRefWrap').find('div.' + classPrefix + 'ptr').get(0); // _SETTINGS.ptrElement;
 
       ptrElement.classList.remove((classPrefix + "refresh"));
       ptrElement.style[cssProp] = '0px';
 
-      _state = 'pending';
+      pageSettingsContainer[curPageIdName]._state = 'pending';
       _update();
     }
 
     function _onTouchStart(e) {
-      var shouldPullToRefresh = _SETTINGS.shouldPullToRefresh;
-      var shouldUpToElasticity = _SETTINGS.shouldUpToElasticity;
-      var triggerElement = _SETTINGS.mainElement;
+      let curPageIdName = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').parent().get(0).localName;
+      var shouldPullToRefresh = pageSettingsContainer[curPageIdName].shouldPullToRefresh;
+      var shouldUpToElasticity = pageSettingsContainer[curPageIdName].shouldUpToElasticity;
+      var triggerElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.pullRefWrap').get(0); // _SETTINGS.mainElement
 
       if (!triggerElement.contains(e.target)) {
         return;
@@ -143,7 +150,7 @@ var PullToRefresh = (function () {
         }
       }
 
-      if (_state !== 'pending') {
+      if (pageSettingsContainer[curPageIdName]._state !== 'pending') {
         return;
       }
       if (triggerElement !== document.body) {
@@ -153,20 +160,21 @@ var PullToRefresh = (function () {
       clearTimeout(_timeout);
 
       _enable = triggerElement.contains(e.target);
-      _state = 'pending';
+      pageSettingsContainer[curPageIdName]._state = 'pending';
       _update();
     }
 
     function _onTouchMove(e) {
-      var cssProp = _SETTINGS.cssProp;
+      let curPageIdName = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').parent().get(0).localName;
       var classPrefix = _SETTINGS.classPrefix;
+      var cssProp = _SETTINGS.cssProp;
       var distMax = _SETTINGS.distMax;
       var distThreshold = _SETTINGS.distThreshold;
-      var ptrElement = _SETTINGS.ptrElement;
-      var ptrAfterElement = _SETTINGS.ptrAfterElement;
-      var triggerElement = _SETTINGS.mainElement;
+      var ptrElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.pullRefWrap').find('div.' + classPrefix + 'ptr').get(0); // _SETTINGS.ptrElement;
+      var ptrAfterElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.' + classPrefix + 'ptr-after').get(0); // _SETTINGS.ptrAfterElement;
+      var triggerElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.pullRefWrap').get(0); // _SETTINGS.mainElement
       var resistanceFunction = _SETTINGS.resistanceFunction;
-      var onlyElasticity = _SETTINGS.onlyElasticity;
+      var onlyElasticity = pageSettingsContainer[curPageIdName].onlyElasticity;
 
       if (!triggerElement.contains(e.target)) {
         return;
@@ -180,7 +188,7 @@ var PullToRefresh = (function () {
         pullMoveY = e.touches[0].screenY;
       }
 
-      if (!_enable || _state === 'refreshing') {
+      if (!_enable || pageSettingsContainer[curPageIdName]._state === 'refreshing') {
         if (canPull && pullStartY < pullMoveY) {
           e.preventDefault();
         }
@@ -195,9 +203,9 @@ var PullToRefresh = (function () {
       }
 
       if (canPull && dist > 0) {
-        if (_state === 'pending') {
+        if (pageSettingsContainer[curPageIdName]._state === 'pending') {
           ptrElement.classList.add((classPrefix + "pull"));
-          _state = 'pulling';
+          pageSettingsContainer[curPageIdName]._state = 'pulling';
           _update();
         }
 
@@ -213,23 +221,23 @@ var PullToRefresh = (function () {
         }
 
         if (!onlyElasticity) {
-          if (_state === 'pulling' && distResisted > distThreshold) {
+          if (pageSettingsContainer[curPageIdName]._state === 'pulling' && distResisted > distThreshold) {
             ptrElement.classList.add((classPrefix + "release"));
-            _state = 'releasing';
+            pageSettingsContainer[curPageIdName]._state = 'releasing';
             _update();
           }
 
-          if (_state === 'releasing' && distResisted < distThreshold) {
+          if (pageSettingsContainer[curPageIdName]._state === 'releasing' && distResisted < distThreshold) {
             ptrElement.classList.remove((classPrefix + "release"));
-            _state = 'pulling';
+            pageSettingsContainer[curPageIdName]._state = 'pulling';
             _update();
           }
         }
       } else if (canElasticity && dist < 0) {
         if (triggerElement !== document.body) {
-          if (_state === 'pending' && onlyElasticity) {
+          if (pageSettingsContainer[curPageIdName]._state === 'pending' && onlyElasticity) {
             ptrAfterElement.classList.add((classPrefix + "pull"));
-            _state = 'pulling';
+            pageSettingsContainer[curPageIdName]._state = 'pulling';
             _update();
           }
 
@@ -243,24 +251,25 @@ var PullToRefresh = (function () {
     }
 
     function _onTouchEnd(e) {
-      var ptrElement = _SETTINGS.ptrElement;
-      var ptrAfterElement = _SETTINGS.ptrAfterElement;
-      var triggerElement = _SETTINGS.mainElement;
-      var onRefresh = _SETTINGS.onRefresh;
-      var onRefreshAfter = _SETTINGS.onRefreshAfter;
+      let curPageIdName = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').parent().get(0).localName;
+      var classPrefix = _SETTINGS.classPrefix;
+      var ptrElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.pullRefWrap').find('div.' + classPrefix + 'ptr').get(0); // _SETTINGS.ptrElement;
+      var ptrAfterElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.' + classPrefix + 'ptr-after').get(0); // _SETTINGS.ptrAfterElement;
+      var triggerElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.pullRefWrap').get(0); // _SETTINGS.mainElement
+      var onRefresh = pageSettingsContainer[curPageIdName].onRefresh;
+      var onRefreshAfter = pageSettingsContainer[curPageIdName].onRefreshAfter;
       var refreshTimeout = _SETTINGS.refreshTimeout;
       var distThreshold = _SETTINGS.distThreshold;
       var distReload = _SETTINGS.distReload;
       var cssProp = _SETTINGS.cssProp;
-      var classPrefix = _SETTINGS.classPrefix;
-      var onlyElasticity = _SETTINGS.onlyElasticity;
+      var onlyElasticity = pageSettingsContainer[curPageIdName].onlyElasticity;
 
       if (!triggerElement.contains(e.target)) {
         return;
       }
 
-      if (_state === 'releasing' && distResisted > distThreshold) {
-        _state = 'refreshing';
+      if (pageSettingsContainer[curPageIdName]._state === 'releasing' && distResisted > distThreshold) {
+        pageSettingsContainer[curPageIdName]._state = 'refreshing';
 
         ptrElement.style[cssProp] = distReload + "px";
         ptrElement.classList.add((classPrefix + "refresh"));
@@ -281,7 +290,7 @@ var PullToRefresh = (function () {
           }
         }, refreshTimeout);
       } else {
-        if (_state === 'refreshing') {
+        if (pageSettingsContainer[curPageIdName]._state === 'refreshing') {
           return;
         }
 
@@ -291,7 +300,7 @@ var PullToRefresh = (function () {
           triggerElement.style.transform = 'translate3d(0px, 0px, 0px)';
         }
 
-        _state = 'pending';
+        pageSettingsContainer[curPageIdName]._state = 'pending';
       }
 
       _update();
@@ -308,9 +317,10 @@ var PullToRefresh = (function () {
     }
 
     function _onScroll() {
-      var mainElement = _SETTINGS.mainElement;
+      let curPageIdName = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').parent().get(0).localName;
+      var mainElement = $('ion-tabs').find('ion-tab.show-tab').find('ion-content').find('scrollview').find('div.pullRefWrap').get(0); // _SETTINGS.mainElement
       var classPrefix = _SETTINGS.classPrefix;
-      var shouldPullToRefresh = _SETTINGS.shouldPullToRefresh;
+      var shouldPullToRefresh = pageSettingsContainer[curPageIdName].shouldPullToRefresh;
       var triggerElement = mainElement;
       mainElement = $(triggerElement).find('div.mainContent').get(0);
 
@@ -335,14 +345,18 @@ var PullToRefresh = (function () {
   }
 
   function _run() {
-    var mainElement = _SETTINGS.mainElement;
+    var mainElement = _SETTINGS.mainElement
     var getMarkup = _SETTINGS.getMarkup;
     var getStyles = _SETTINGS.getStyles;
     var classPrefix = _SETTINGS.classPrefix;
+    var pageIdName = _SETTINGS.pageIdName;
     var onInit = _SETTINGS.onInit;
     var pullAreaBg = _SETTINGS.pullAreaBg;
+    var elasticityTopAreaBg = _SETTINGS.elasticityTopAreaBg;
     var elasticityAreaBg = _SETTINGS.elasticityAreaBg;
     var onlyElasticity = _SETTINGS.onlyElasticity;
+    var titleBarHeight = _SETTINGS.titleBarHeight;
+    var footerBarHeight = _SETTINGS.footerBarHeight;
     var otherElmHeight = _SETTINGS.otherElmHeight;
     var offsetWidth = _SETTINGS.offsetWidth;
     var offsetTop = _SETTINGS.offsetTop;
@@ -351,6 +365,33 @@ var PullToRefresh = (function () {
     var refTxtColor = _SETTINGS.refTxtColor;
     var triggerElement = mainElement;
     mainElement = $(triggerElement).find('div.mainContent').get(0);
+    if (footerBarHeight == 'auto') {
+      footerBarHeight = $('div.tabbar').height();
+    }
+    // 保存各页面参数
+    if (pageIdName) {
+      let curPageSettings = {};
+
+      var instructionsRefreshing = _SETTINGS.instructionsRefreshing;
+      curPageSettings['instructionsRefreshing'] = instructionsRefreshing;
+      var instructionsPullToRefresh = _SETTINGS.instructionsPullToRefresh;
+      curPageSettings['instructionsPullToRefresh'] = instructionsPullToRefresh;
+      var instructionsReleaseToRefresh = _SETTINGS.instructionsReleaseToRefresh;
+      curPageSettings['instructionsReleaseToRefresh'] = instructionsReleaseToRefresh;
+      curPageSettings['onlyElasticity'] = onlyElasticity;
+      var shouldPullToRefresh = _SETTINGS.shouldPullToRefresh;
+      var shouldUpToElasticity = _SETTINGS.shouldUpToElasticity;
+      curPageSettings['shouldPullToRefresh'] = shouldPullToRefresh;
+      curPageSettings['shouldUpToElasticity'] = shouldUpToElasticity;
+      var onRefresh = _SETTINGS.onRefresh;
+      var onRefreshAfter = _SETTINGS.onRefreshAfter;
+      curPageSettings['onRefresh'] = onRefresh;
+      curPageSettings['onRefreshAfter'] = onRefreshAfter;
+
+      curPageSettings['_state'] = 'pending';
+
+      pageSettingsContainer[pageIdName] = curPageSettings;
+    }
 
     if (!triggerElement.querySelector(("." + classPrefix + "ptr"))) {
       var ptr = document.createElement('div');
@@ -363,25 +404,21 @@ var PullToRefresh = (function () {
       if (offsetWidth > 0 && offsetLeft > 0) {
         ptrAfter.style.width = offsetWidth + 'px';
       }
-      let appHeaderHeight = 0;
-      if ($('ion-header.header').length > 0) {
-        appHeaderHeight = $('ion-header.header').height();
-      }
-      let pageHomeHeight = $(triggerElement).parents('page-home.ion-page').get(0).clientHeight;
-      if (scrollViewHeight > 0 && scrollViewHeight < pageHomeHeight) {
+      let pageHeight = $(triggerElement).parents('ion-content').get(0).clientHeight;
+      if (scrollViewHeight > 0 && scrollViewHeight < pageHeight) {
         ptrAfter.style.height = (scrollViewHeight) + 'px';
       } else {
-        ptrAfter.style.height = (pageHomeHeight - appHeaderHeight - offsetTop - Number(otherElmHeight)) + 'px';
+        ptrAfter.style.height = (pageHeight - titleBarHeight - offsetTop - Number(otherElmHeight)) - footerBarHeight + 'px';
       }
       mainElement.parentNode.parentNode.appendChild(ptrAfter);
       if (triggerElement !== document.body) {
         triggerElement.style.transition = '';
         triggerElement.style.transform = 'translate3d(0px, 0px, 0px)';
       }
-      if (scrollViewHeight > 0 && scrollViewHeight < pageHomeHeight) {
+      if (scrollViewHeight > 0 && scrollViewHeight < pageHeight) {
         triggerElement.style.height = (scrollViewHeight) + 'px';
       } else {
-        triggerElement.style.height = (pageHomeHeight - appHeaderHeight - offsetTop - Number(otherElmHeight)) + 'px';
+        triggerElement.style.height = (pageHeight - titleBarHeight - offsetTop - Number(otherElmHeight)) - footerBarHeight + 'px';
       }
       triggerElement.style.overflowX = 'hidden';
       triggerElement.style.overflowY = 'auto';
@@ -405,16 +442,20 @@ var PullToRefresh = (function () {
     // insert it into the dom
     // ========================================================
     var styleEl;
-    if (!document.querySelector('#pull-to-refresh-js-style')) {
+    let pageIdNameForStyle = '';
+    pageIdName != '' ? pageIdNameForStyle = pageIdName + '-' : {};
+    let styleId = pageIdNameForStyle + 'pull-to-refresh-js-style';
+    if (!document.querySelector('#' + styleId)) {
       styleEl = document.createElement('style');
-      styleEl.setAttribute('id', 'pull-to-refresh-js-style');
+      styleEl.setAttribute('id', styleId);
 
       document.head.appendChild(styleEl);
     } else {
-      styleEl = document.querySelector('#pull-to-refresh-js-style');
+      styleEl = document.querySelector('#' + styleId);
     }
 
     styleEl.textContent = getStyles()
+      .replace(/_PAGE_ID_ABOUT_/g, pageIdName)
       .replace(/__PREFIX__/g, classPrefix)
       .replace(/\s+/g, ' ');
     if (refTxtColor) {
@@ -425,7 +466,11 @@ var PullToRefresh = (function () {
     if (!onlyElasticity && pullAreaBg && pullAreaBg != '') {
       styleEl.textContent = styleEl.textContent.replace(/__PULLWRAPBG__/g, 'background: ' + pullAreaBg + ';');
     } else {
-      styleEl.textContent = styleEl.textContent.replace(/__PULLWRAPBG__/g, '');
+      if (onlyElasticity && elasticityTopAreaBg && elasticityTopAreaBg != '') {
+        styleEl.textContent = styleEl.textContent.replace(/__PULLWRAPBG__/g, 'background: ' + elasticityTopAreaBg + ';');
+      } else {
+        styleEl.textContent = styleEl.textContent.replace(/__PULLWRAPBG__/g, '');
+      }
     }
     if (elasticityAreaBg && elasticityAreaBg != '') {
       styleEl.textContent = styleEl.textContent.replace(/__PULLAFTERBG__/g, 'background: ' + elasticityAreaBg + ' !important;');
@@ -455,7 +500,11 @@ var PullToRefresh = (function () {
 
       var handlers;
       Object.keys(_defaults).forEach(function (key) {
-        _SETTINGS[key] = options[key] || _defaults[key];
+        if (typeof _defaults[key] == 'boolean' && typeof options[key] != 'undefined') {
+          _SETTINGS[key] = options[key];
+        } else {
+          _SETTINGS[key] = options[key] || _defaults[key];
+        }
       });
 
       var methods = ['mainElement', 'ptrElement', 'triggerElement'];
@@ -466,7 +515,7 @@ var PullToRefresh = (function () {
       });
 
       if (!_setup) {
-        handlers = _setupEvents();
+        handlers = new _setupEvents();
         _setup = true;
       }
 

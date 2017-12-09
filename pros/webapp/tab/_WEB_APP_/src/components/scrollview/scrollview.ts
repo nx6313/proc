@@ -1,5 +1,6 @@
 import { Component, Input, Output, OnInit, EventEmitter, ViewChild, ElementRef } from '@angular/core';
 import { Platform } from 'ionic-angular';
+import { UtilService } from '../../providers/util-service';
 
 declare var $;
 declare var PullToRefresh;
@@ -15,16 +16,21 @@ export class ScrollviewComponent {
   @Input('height') scrollViewHeight: number = -1;
   @Input('bottomOtherHeight') bottomOtherHeight: number = 0;
   @Input('pullRefSupport') pullRefSupport: boolean = false;
-  @Input('pullAreaBg') pullAreaBg: string = '#CCCCCC';
-  @Input('instructionsPullToRefresh') instructionsPullToRefresh: string = '继续下拉';
-  @Input('instructionsReleaseToRefresh') instructionsReleaseToRefresh: string = '释放刷新';
+  @Input('pullAreaBg') pullAreaBg: string = '#DAE3E6';
+  @Input('topAreaBg') elasticityTopAreaBg: string = '#ffffff';
+  @Input('areaBg') elasticityAreaBg: string = '#ebf0f2';
+  @Input('instructionsPullToRefresh') instructionsPullToRefresh: string = '往下再拉一点';
+  @Input('instructionsReleaseToRefresh') instructionsReleaseToRefresh: string = '释放就可以刷新啦';
   @Input('instructionsRefreshing') instructionsRefreshing: string = '正在刷新';
   @Input('iconArrow') iconArrow: string = 'assets/imgs/pull.png';
-  @Input('iconRefreshing') iconRefreshing: string = 'assets/imgs/refing.png';
+  @Input('iconRefreshing') iconRefreshing: string = 'assets/imgs/pull.png';
   @Input('iconZoomRate') iconZoomRate: number = 0.1;
   @Input('refTxtColor') refTxtColor: string = '#4D4D4D';
+  @Input('offsetTop') offsetTop: number = -1;
 
-  constructor(private platform: Platform) {
+  constructor(private platform: Platform,
+    private utilService: UtilService) {
+
   }
 
   ngOnInit() {
@@ -35,11 +41,15 @@ export class ScrollviewComponent {
 
   initPullRef() {
     let scrollEle: HTMLElement = this._pullrefContent.nativeElement;
+    let pageIdName = $(scrollEle.parentElement.parentElement).parents('ion-content').parent().get(0).localName;
+    this.offsetTop > 0 ? {} : this.offsetTop = scrollEle.offsetTop;
     PullToRefresh.init({
       mainElement: scrollEle,
       classPrefix: 'ionic-',
+      pageIdName: pageIdName,
       pullAreaBg: this.pullAreaBg,
-      elasticityAreaBg: null,
+      elasticityTopAreaBg: this.elasticityTopAreaBg,
+      elasticityAreaBg: this.elasticityAreaBg,
       instructionsPullToRefresh: this.instructionsPullToRefresh,
       instructionsReleaseToRefresh: this.instructionsReleaseToRefresh,
       instructionsRefreshing: this.instructionsRefreshing,
@@ -58,9 +68,11 @@ export class ScrollviewComponent {
       },
       onlyElasticity: (!this.pullRefSupport),
       scrollViewHeight: this.scrollViewHeight,
+      titleBarHeight: 44,
+      footerBarHeight: 'auto',
       otherElmHeight: this.bottomOtherHeight,
       offsetWidth: scrollEle.offsetWidth,
-      offsetTop: scrollEle.offsetTop,
+      offsetTop: this.offsetTop,
       offsetLeft: scrollEle.offsetLeft,
       shouldPullToRefresh: () => {
         let scrollTop = scrollEle.scrollTop;
@@ -80,11 +92,11 @@ export class ScrollviewComponent {
       }
     });
   }
-  
-    // 提供方法，将滚动条保持在最下
-    scrollToBottom() {
-      let scrollEle: HTMLElement = this._pullrefContent.nativeElement;
-      scrollEle.scrollTop = $(scrollEle).stop().animate({ scrollTop: scrollEle.scrollHeight + 'px' }, 600);
-    }
+
+  // 提供方法，将滚动条保持在最下
+  scrollToBottom() {
+    let scrollEle: HTMLElement = this._pullrefContent.nativeElement;
+    scrollEle.scrollTop = $(scrollEle).stop().animate({ scrollTop: scrollEle.scrollHeight + 'px' }, 600);
+  }
 
 }

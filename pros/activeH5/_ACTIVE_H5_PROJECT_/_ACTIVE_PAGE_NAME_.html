@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>_ACTIVE_TITLE_NAME_</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+    <link rel="stylesheet" type="text/css" href="css/weui.min.css" media="all" />
+    <link rel="stylesheet" type="text/css" href="layui/css/layui.css" media="all" />
+    <link rel="stylesheet" type="text/css" href="css/animate.css" />
+    <link rel="stylesheet" type="text/css" href="css/comm.css" />
+    <link rel="stylesheet" type="text/css" href="css/fkpagetransitions.css" />
+    <link rel="stylesheet" type="text/css" href="css/modules/_ACTIVE_PAGE_NAME_.css" />
+    <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+    <script type="text/javascript" src="js/weui.min.js" charset="utf-8"></script>
+    <script type="text/javascript" src="layui/layui.js" charset="utf-8"></script>
+    <script type="text/javascript" src="js/comm.js"></script>
+    <script type="text/javascript" src="js/fkpagetransitions.js"></script>
+    <script>
+        layui.config({ base: 'modules/' }).use('_ACTIVE_PAGE_NAME_');
+    </script>
+</head>
+
+<body>
+    <div class="musicPlayWrap rotate" onclick="layui._ACTIVE_PAGE_NAME_('playMusicToggle', this)">
+        <audio loop="" src="http://res1.eqh5.com/store/7285452cf4e21fa679b8eee24168402a.mp3" autoplay="" preload=""></audio>
+    </div>
+    <ul class="pageItemWrap">
+        _ACTIVE_PAGE_ITEM_TEMPLETE_
+    </ul>
+    <div class="pre-wrap-bottom">
+        <div class="pre-box1">
+            <div class="pre1"></div>
+        </div>
+        <div class="pre-box2">
+            <div class="pre2"></div>
+        </div>
+    </div>
+    <div class="pageProgress layui-progress" lay-filter="pageProgress">
+        <div class="layui-progress-bar" lay-percent="0%"></div>
+    </div>
+</body>
+
+</html>
