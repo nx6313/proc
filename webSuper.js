@@ -551,7 +551,7 @@ spring.mvc.view.suffix=.jsp`;
                 for (let h5PageIndex = 0; h5PageIndex < activeH5PageCount; h5PageIndex++) {
                     updateToVal += `<li class="pageItem pageItem${h5PageIndex + 1}">
 \t\t\t<!-- 请在此处添加第 ${h5PageIndex + 1} 页代码 -->\n
-\t\t</li>`;
+\t\t</li>\n`;
                 }
             } else if (updateToVal == '_CSS_BY_ACTIVE_H5_PAGE_COUNT_') {
                 let activeH5PageCount = projectConfigSetContainer.ACTIVEH5_PAGE_COUNT;
@@ -562,7 +562,7 @@ spring.mvc.view.suffix=.jsp`;
 .pageItemWrap li.pageItem${h5PageIndex + 1} {
 \tbackground-image: url('');
 }
-/****** 其他样式 - 页面元素 ******/\n\n`;
+/****** 其他样式 - 页面元素 ******/\n\n\n`;
                 }
             }
             dataCtx = dataCtx.replace(eval('/' + fileUpdateKey + '/g'), updateToVal);
