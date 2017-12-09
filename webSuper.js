@@ -547,6 +547,7 @@ spring.mvc.view.suffix=.jsp`;
                 updateToVal = projectConfigSetContainer.WEB_APP_SHOW_NAME;
             } else if (updateToVal == '_BY_ACTIVE_H5_PAGE_COUNT_') {
                 let activeH5PageCount = projectConfigSetContainer.ACTIVEH5_PAGE_COUNT;
+                updateToVal = ``;
                 for (let h5PageIndex = 0; h5PageIndex < activeH5PageCount; h5PageIndex++) {
                     updateToVal += `<li class="pageItem pageItem${h5PageIndex + 1}">
 \t\t\t<!-- 请在此处添加第 ${h5PageIndex + 1} 页代码 -->\n
@@ -554,6 +555,7 @@ spring.mvc.view.suffix=.jsp`;
                 }
             } else if (updateToVal == '_CSS_BY_ACTIVE_H5_PAGE_COUNT_') {
                 let activeH5PageCount = projectConfigSetContainer.ACTIVEH5_PAGE_COUNT;
+                updateToVal = ``;
                 for (let h5PageIndex = 0; h5PageIndex < activeH5PageCount; h5PageIndex++) {
                     updateToVal += `/****************** 第 ${h5PageIndex + 1} 页 ******************/
 /****** 背景图设置 ******/
