@@ -1,0 +1,124 @@
+body {
+	display: none;
+	-webkit-font-smoothing: antialiased;
+}
+
+/* 基础样式 */
+.flex-r {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.flex-col {
+	display: flex;
+	flex-direction: column;
+}
+
+.flex-1 {
+	flex: 1 1 auto;
+}
+
+.flex-c {
+	justify-content: center;
+}
+
+.flex-b {
+	justify-content: space-between;
+}
+
+.flex-a {
+	justify-content: space-around;
+}
+
+.flex-s {
+	justify-content: flex-start;
+}
+
+.flex-e {
+	justify-content: flex-end;
+}
+
+.mt10 {
+	margin-top: 10px;
+}
+.mt20 {
+	margin-top: 20px;
+}
+.mt30 {
+	margin-top: 30px;
+}
+.mt40 {
+	margin-top: 40px;
+}
+.mt50 {
+	margin-top: 50px;
+}
+.mt60 {
+	margin-top: 60px;
+}
+.mt70 {
+	margin-top: 70px;
+}
+.mt80 {
+	margin-top: 80px;
+}
+.mt90 {
+	margin-top: 90px;
+}
+.mt100 {
+	margin-top: 100px;
+}
+
+.noselect {
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+.text-press {
+	color: transparent;
+	background-color : black;
+	text-shadow : rgba(255, 255, 255, 0.5) 0 1rem 2rem, rgba(255, 255, 255, 0.2) 1rem 3rem 3rem;
+	background-clip : text;
+	-webkit-background-clip : text;
+}
+
+.letter-press {
+	color: transparent;
+	background-color : black;
+	text-shadow :  rgb(185, 185, 185) 0rem 0rem 0rem;
+	background-clip : text;
+	-webkit-background-clip : text;
+}
+
+.ripple {
+	position: relative;
+    overflow: hidden;
+}
+
+.ripple:after {
+    content: "";
+    display: block;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle, rgb(179, 179, 179) 10%, transparent 10.01%);
+    background-repeat: no-repeat;
+    background-position: 50%;
+    transform: scale(10, 10);
+    opacity: 0;
+    transition: transform .3s, opacity .5s;
+}
+
+.ripple:active:after {
+    transform: scale(0, 0);
+    opacity: .3;
+    transition: 0s;
+}

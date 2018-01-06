@@ -169,11 +169,11 @@ var menuIndexArr = [];
 var showMenu = function () {
     let menuArr = [
         '构建WEB项目框架(包含数据展示及后台管理的框架)', '构建WEB后台接口程序框架', '构建微信公众号框架',
-        '构建微信小程序框架', '构建手机端WebApp框架'
+        '构建微信小程序框架', '构建手机端WebApp框架', '构建H5活动推广页'
     ];
     let menuSuperArr = [
-        '为WebApp项目执行 npm install 命令', '为WebApp项目导入想要的组件', '为WebApp项目集成JPush（第一步）（请确保执行过npm install）',
-        '为WebApp项目集成JPush 执行 npm install ionic2-jpush --save 命令（第二步）'
+        '为WebApp项目执行 npm install 命令（ptcx支持）', '为WebApp项目导入想要的组件（ptcx支持）', '为WebApp项目集成JPush（第一步）（请确保执行过npm install）（ptcx支持）',
+        '为WebApp项目集成JPush 执行 npm install ionic2-jpush --save 命令（第二步）（ptcx支持）'
     ];
     let desMenu = [
         'WebApp JPush使用说明：执行S3和S4命令后，程序中导入 import { IonJPushModule, JPushService } from "ionic2-jpush";'
@@ -347,6 +347,15 @@ var copy = function (src, dst, resolve, projectName, packageReplace) {
                                     dest = libPath.join(dst, dirUpdateToVal);
                                 } else if (filename == '_project_name_.properties') { // 针对WEB项目Maven
                                     let dirUpdateToVal = projectName.toLowerCase() + '.properties';
+                                    dest = libPath.join(dst, dirUpdateToVal);
+                                } else if (filename == '_ACTIVE_PAGE_NAME_.html') { // 针对ACTIVE_H5
+                                    let dirUpdateToVal = projectName.toLowerCase() + '.html';
+                                    dest = libPath.join(dst, dirUpdateToVal);
+                                } else if (filename == '_ACTIVE_PAGE_NAME_.js') { // 针对ACTIVE_H5
+                                    let dirUpdateToVal = projectName.toLowerCase() + '.js';
+                                    dest = libPath.join(dst, dirUpdateToVal);
+                                } else if (filename == '_ACTIVE_PAGE_NAME_.css') { // 针对ACTIVE_H5
+                                    let dirUpdateToVal = projectName.toLowerCase() + '.css';
                                     dest = libPath.join(dst, dirUpdateToVal);
                                 }
                                 //创建读取流
@@ -536,6 +545,25 @@ spring.mvc.view.suffix=.jsp`;
                 updateToVal = projectConfigSetContainer.WEB_APP_PACKET_NAME;
             } else if (updateToVal == '_THIS_APP_NAME_') {
                 updateToVal = projectConfigSetContainer.WEB_APP_SHOW_NAME;
+            } else if (updateToVal == '_BY_ACTIVE_H5_PAGE_COUNT_') {
+                let activeH5PageCount = projectConfigSetContainer.ACTIVEH5_PAGE_COUNT;
+                updateToVal = ``;
+                for (let h5PageIndex = 0; h5PageIndex < activeH5PageCount; h5PageIndex++) {
+                    updateToVal += `<li class="pageItem pageItem${h5PageIndex + 1}">
+\t\t\t<!-- 请在此处添加第 ${h5PageIndex + 1} 页代码 -->\n
+\t\t</li>\n`;
+                }
+            } else if (updateToVal == '_CSS_BY_ACTIVE_H5_PAGE_COUNT_') {
+                let activeH5PageCount = projectConfigSetContainer.ACTIVEH5_PAGE_COUNT;
+                updateToVal = ``;
+                for (let h5PageIndex = 0; h5PageIndex < activeH5PageCount; h5PageIndex++) {
+                    updateToVal += `/****************** 第 ${h5PageIndex + 1} 页 ******************/
+/****** 背景图设置 ******/
+.pageItemWrap li.pageItem${h5PageIndex + 1} {
+\tbackground-image: url('');
+}
+/****** 其他样式 - 页面元素 ******/\n\n\n`;
+                }
             }
             dataCtx = dataCtx.replace(eval('/' + fileUpdateKey + '/g'), updateToVal);
         }
@@ -665,6 +693,17 @@ var buildWebAppProject = function (projectFilePath, updateCtx) {
                         startToBuildWebAppProjectWhenAskAfter(projectFilePath, updateCtx, projectName, packetName, appShowName, appType);
                     });
                 });
+            });
+        });
+    });
+};
+
+// 构建H5活动推广页
+var buildActiveH5Project = function (activeH5ProjectPath, updateCtx) {
+    askProjectName(function (projectName) {
+        askProjectSavePath(function () {
+            askActiveH5PageCount(function (activeH5PageCount) {
+                startToBuildActiveH5ProjectWhenAskAfter(activeH5ProjectPath, updateCtx, projectName, activeH5PageCount);
             });
         });
     });
@@ -818,6 +857,69 @@ function startToBuildWebAppProjectWhenAskAfter(projectFilePath, updateCtx, proje
     });
 }
 
+// 询问完成，开始执行ActiveH5项目创建
+function startToBuildActiveH5ProjectWhenAskAfter(activeH5ProjectPath, updateCtx, projectName, activeH5PageCount) {
+    projectConfigSetContainer = {}; // 清空修改的项目相关配置信息，由提问获取
+    updateProjectDirContainer = {}; // 清空修改部分文件夹容器对象
+    updateProjectFileContainer = {}; // 清空修改部分文件容器对象
+    ignoreProjectDirContainer = {}; // 清空忽略文件夹部分容器
+    ignoreProjectFileContainer = {}; // 清空忽略文件部分容器
+    updateProjectDirContainer._ACTIVE_H5_PROJECT_ = projectName;
+    // 提问得来的参数
+    projectConfigSetContainer.ACTIVEH5_PAGE_COUNT = activeH5PageCount;
+    let packageReplace = false;
+    if (updateCtx) {
+        if (updateCtx.dir) {
+            for (let updateDirKey in updateCtx.dir) {
+                updateProjectDirContainer[updateDirKey] = updateCtx.dir[updateDirKey];
+            }
+        }
+        if (updateCtx.file) {
+            for (let updateFileKey in updateCtx.file) {
+                updateProjectFileContainer[updateFileKey] = updateCtx.file[updateFileKey];
+            }
+        }
+        if (updateCtx.ignoreDir) {
+            for (let updateFileKey in updateCtx.ignoreDir) {
+                ignoreProjectDirContainer[updateFileKey] = updateCtx.ignoreDir[updateFileKey];
+            }
+        }
+        if (updateCtx.ignoreFile) {
+            for (let updateFileKey in updateCtx.ignoreFile) {
+                ignoreProjectFileContainer[updateFileKey] = updateCtx.ignoreFile[updateFileKey];
+            }
+        }
+    }
+    libFs.exists(libPath.join(filePath, ''), function (savePathExists) {
+        if (savePathExists) {
+            libFs.exists(libPath.join(filePath, projectName), function (projectDirExists) {
+                if (!projectDirExists) {
+                    new Promise(function (resolve) {
+                        console.log('');
+                        let filesList = geFileList(activeH5ProjectPath);
+                        fileTotalLength = filesList.length;
+                        copy(activeH5ProjectPath, filePath, resolve, projectName, packageReplace);
+                    }).then(function (value) {
+                        rl.setPrompt(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ' + filePath, '项目构建完成，保存路径为：'));
+                        rl.prompt();
+                        rl.close();
+                    });
+                } else {
+                    console.error(styles.redBG[0] + '%s' + styles.redBG[1], '项目保存路径下存在同名的文件夹，请重新输入');
+                    askProjectName(function (projectName) {
+                        startToBuildActiveH5ProjectWhenAskAfter(activeH5ProjectPath, updateCtx, projectName, activeH5PageCount);
+                    });
+                }
+            });
+        } else {
+            console.error(styles.redBG[0] + '%s' + styles.redBG[1], '项目保存路径不存在，请重新输入');
+            askProjectSavePath(function () {
+                startToBuildActiveH5ProjectWhenAskAfter(activeH5ProjectPath, updateCtx, projectName, activeH5PageCount);
+            });
+        }
+    });
+}
+
 // 询问项目名称
 function askProjectName(callback) {
     rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '输入项目名称：'), (projectName) => {
@@ -894,6 +996,20 @@ function askProjectSavePath(callback) {
         }
         if (callback && typeof callback === 'function') {
             callback();
+        }
+    });
+}
+
+// 询问H5活动页包含的页面数量
+function askActiveH5PageCount(callback) {
+    rl.question(util.format(styles.greenBG[0] + '%s' + styles.greenBG[1] + ' ', '该H5活动页共包含几个页面：'), (activeH5PageCount) => {
+        if (activeH5PageCount && /^[1-9]+[0-9]*]*$/.test(activeH5PageCount)) {
+            if (callback && typeof callback === 'function') {
+                callback(activeH5PageCount.trim());
+            }
+        } else {
+            console.error(styles.redBG[0] + '%s' + styles.redBG[1], '活动页面数量输入有误，请重新输入');
+            askActiveH5PageCount(callback);
         }
     });
 }
@@ -1210,6 +1326,36 @@ var questionSelectMenu = function (doForType) {
                             },
                             'package.json': {
                                 _WEB_APP_: '_PROJECT_NAME_'
+                            }
+                        },
+                        ignoreDir: {
+
+                        },
+                        ignoreFile: {
+
+                        }
+                    });
+                    break;
+                case '6':
+                    // 构建H5活动推广页
+                    let activeH5ProjectModePath = '../projectc/pros/activeH5/';
+                    if (doForType == 'forD') {
+                        activeH5ProjectModePath = libPath.join('D:/nx-proc/node_modules/', 'projectc/pros/activeH5/');
+                    }
+                    buildActiveH5Project(activeH5ProjectModePath, {
+                        dir: {
+                            _ACTIVE_H5_PROJECT_: '_PROJECT_NAME_'
+                        },
+                        file: {
+                            '_ACTIVE_PAGE_NAME_.html': {
+                                _ACTIVE_PAGE_NAME_: '_PROJECT_NAME_',
+                                _ACTIVE_PAGE_ITEM_TEMPLETE_: '_BY_ACTIVE_H5_PAGE_COUNT_'
+                            },
+                            '_ACTIVE_PAGE_NAME_.js': {
+                                _ACTIVE_PAGE_NAME_: '_PROJECT_NAME_'
+                            },
+                            '_ACTIVE_PAGE_NAME_.css': {
+                                _ACTIVE_PAGE_MAIN_CSS_: '_CSS_BY_ACTIVE_H5_PAGE_COUNT_'
                             }
                         },
                         ignoreDir: {
